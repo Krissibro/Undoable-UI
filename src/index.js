@@ -1,99 +1,62 @@
 // src/index.js
+import { CheckboxUndoable } from 'undoable-elements/checkbox.js';
 
-// Global history stacks for undo/redo actions
-const globalHistory = [];
-const redoStack = [];
-
-/**
- * CheckboxCommand encapsulates a single toggle action on a checkbox.
- * It records the checkbox element, its previous state, and its new state.
- */
-class CheckboxCommand {
-    /**
-     * @param {HTMLInputElement} checkbox - The checkbox element.
-     * @param {boolean} previousState - The state before the change.
-     * @param {boolean} newState - The state after the change.
-     */
-    constructor(checkbox, previousState, newState) {
-        this.checkbox = checkbox;
-        this.previousState = previousState;
-        this.newState = newState;
-    }
-
-    /**
-     * Execute sets the checkbox to the new state.
-     */
-    execute() {
-        this.checkbox.checked = this.newState;
-    }
-
-    /**
-     * Undo reverts the checkbox to its previous state.
-     */
-    undo() {
-        this.checkbox.checked = this.previousState;
-    }
-}
+// Global history arrays
+// for simplicity, we attach these to the window so they are accessible by our modules
+window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
+window.__REDO_STACK__ = window.__REDO_STACK__ || [];
 
 /**
- * Event handler for checkbox changes.
- * When a checkbox is toggled, this function creates a new CheckboxCommand
- * representing the action and adds it to the global history.
+ * Factory mapping: Each entry defines a CSS selector and a factory function
+ * that takes a DOM element and returns an instance of an undoable handler.
  */
-function handleCheckboxChange(event) {
-    const checkbox = event.target;
-    const newState = checkbox.checked;
-    // For a simple toggle, assume the previous state was the opposite of the new state.
-    const previousState = !newState;
-    const command = new CheckboxCommand(checkbox, previousState, newState);
-
-    // Push the new command to the global history stack.
-    globalHistory.push(command);
-
-    // Clear the redo stack because new actions invalidate the redo history.
-    redoStack.length = 0;
-
-    console.log('Recorded command:', command);
-}
+const factoryMap = [
+    {
+        selector: 'input[type="checkbox"]',
+        factory: (el) => new CheckboxUndoable(el),
+    },
+    // Future element types can be added here.
+];
 
 /**
- * Scans the DOM for all checkboxes and attaches the change event listener.
- * This is our one-time DOM scan during initialization.
+ * Scan the DOM for undoable elements.
+ * For each mapping in factoryMap, select all matching elements and create a handler.
  */
-function scanForCheckboxes() {
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', handleCheckboxChange);
+function scanForUndoableElements() {
+    factoryMap.forEach(({ selector, factory }) => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach((el) => {
+            // Optionally, check if element is already wrapped.
+            if (!el.__undoable__) {
+                el.__undoable__ = factory(el);
+            }
+        });
     });
 }
 
 /**
- * Global undo function.
- * It removes the most recent command from the global history,
- * calls its undo() method, and pushes it onto the redo stack.
+ * Global undo function: undoes the most recent action.
  */
-function undo() {
-    if (globalHistory.length > 0) {
-        const command = globalHistory.pop();
+export function undo() {
+    if (window.__GLOBAL_HISTORY__.length > 0) {
+        const command = window.__GLOBAL_HISTORY__.pop();
         command.undo();
-        redoStack.push(command);
-        console.log('Undo executed');
+        window.__REDO_STACK__.push(command);
+        console.log('Global undo executed');
     } else {
         console.log('No command to undo');
     }
 }
 
 /**
- * Global redo function.
- * It removes the most recent command from the redo stack,
- * re-executes it, and pushes it back onto the global history.
+ * Global redo function: re-executes the most recently undone action.
  */
-function redo() {
-    if (redoStack.length > 0) {
-        const command = redoStack.pop();
+export function redo() {
+    if (window.__REDO_STACK__.length > 0) {
+        const command = window.__REDO_STACK__.pop();
         command.execute();
-        globalHistory.push(command);
-        console.log('Redo executed');
+        window.__GLOBAL_HISTORY__.push(command);
+        console.log('Global redo executed');
     } else {
         console.log('No command to redo');
     }
@@ -101,25 +64,21 @@ function redo() {
 
 /**
  * Initialization function.
- * This function performs the one-time DOM scan for checkboxes.
- * Might extend this to also use MutationObserver later.
+ * Scans the DOM for undoable elements and attaches their handlers.
  */
 export function init() {
-    scanForCheckboxes();
+    scanForUndoableElements();
     console.log('UndoableUI initialized');
 }
 
-// Export undo and redo functions so they can be accessed by developers.
-export { undo, redo };
-
-// UMD: Attach the API to the window if running in a browser without a module system.
+// Auto-initialize when DOM is ready.
 if (typeof window !== 'undefined') {
-    window.UndoableUI = { undo, redo };
-
-    // Wait until the DOM is fully loaded before initializing
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => init());
     } else {
-        init(); // If DOM is already loaded, initialize immediately
+        init();
     }
+
+    // Expose the API globally (UMD style)
+    window.UndoableUI = { undo, redo };
 }
