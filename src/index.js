@@ -1,5 +1,6 @@
 // src/index.js
 import { Checkbox } from './undoable-elements/elements/Checkbox.js';
+import {Radio} from "./undoable-elements/elements/Radio";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -14,6 +15,10 @@ const factoryMap = [
     {
         selector: 'input[type="checkbox"]',
         factory: (element) => new Checkbox(element),
+    },
+    {
+        selector: 'input[type="radio"]',
+        factory: (element) => new Radio(element),
     },
     // Future element types can be added here.
 ];
