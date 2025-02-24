@@ -1,27 +1,27 @@
-// src/checkbox.js
-import { UndoableElement } from './base.js';
+import { UndoableElement } from '../UndoableElement.js';
+import { Action } from '../Action.js';
 
 /**
  * CheckboxCommand encapsulates a toggle action on a checkbox.
  */
-export class CheckboxAction {
+export class CheckboxAction extends Action {
     /**
      * @param {HTMLInputElement} checkbox - The checkbox element.
      * @param {boolean} previousState - The state before the change.
      * @param {boolean} newState - The state after the change.
      */
     constructor(checkbox, previousState, newState) {
-        this.checkbox = checkbox;
+        super(checkbox)
         this.previousState = previousState;
         this.newState = newState;
     }
 
-    execute() {
-        this.checkbox.checked = this.newState;
+    performAction() {
+        this.element.checked = this.newState;
     }
 
     undo() {
-        this.checkbox.checked = this.previousState;
+        this.element.checked = this.previousState;
     }
 }
 
@@ -29,7 +29,7 @@ export class CheckboxAction {
  * CheckboxUndoable wraps a checkbox element to automatically attach an event listener.
  * It extends the base UndoableElement class.
  */
-export class CheckboxUndoable extends UndoableElement {
+export class Checkbox extends UndoableElement {
     constructor(element) {
         super(element);
         this.attachListeners();
@@ -37,12 +37,12 @@ export class CheckboxUndoable extends UndoableElement {
 
     attachListeners() {
         this.element.addEventListener('change', (event) => {
-            const command = this.createAction(event);
+            const action = this.createAction(event);
             // Push the command to the global history.
-            window.__GLOBAL_HISTORY__.push(command);
+            window.__GLOBAL_HISTORY__.push(action);
             // Clear redo stack
             window.__REDO_STACK__.length = 0;
-            console.log('Checkbox command recorded:', command);
+            console.log('Checkbox command recorded:', action);
         });
     }
 

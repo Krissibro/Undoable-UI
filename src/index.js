@@ -1,5 +1,5 @@
 // src/index.js
-import { CheckboxUndoable } from 'undoable-elements/checkbox.js';
+import { Checkbox } from './undoable-elements/elements/Checkbox.js';
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -13,11 +13,12 @@ window.__REDO_STACK__ = window.__REDO_STACK__ || [];
 const factoryMap = [
     {
         selector: 'input[type="checkbox"]',
-        factory: (el) => new CheckboxUndoable(el),
+        factory: (element) => new Checkbox(element),
     },
     // Future element types can be added here.
 ];
 
+// TODO: Could be more efficient by only scanning the DOM once.
 /**
  * Scan the DOM for undoable elements.
  * For each mapping in factoryMap, select all matching elements and create a handler.
@@ -25,23 +26,25 @@ const factoryMap = [
 function scanForUndoableElements() {
     factoryMap.forEach(({ selector, factory }) => {
         const elements = document.querySelectorAll(selector);
-        elements.forEach((el) => {
+        elements.forEach((element) => {
             // Optionally, check if element is already wrapped.
-            if (!el.__undoable__) {
-                el.__undoable__ = factory(el);
+            if (!element.__undoable__) {
+                element.__undoable__ = factory(element);
             }
         });
     });
 }
+
+// TODO: Add mutation observer to automatically attach listeners to new elements.
 
 /**
  * Global undo function: undoes the most recent action.
  */
 export function undo() {
     if (window.__GLOBAL_HISTORY__.length > 0) {
-        const command = window.__GLOBAL_HISTORY__.pop();
-        command.undo();
-        window.__REDO_STACK__.push(command);
+        const action = window.__GLOBAL_HISTORY__.pop();
+        action.undo();
+        window.__REDO_STACK__.push(action);
         console.log('Global undo executed');
     } else {
         console.log('No command to undo');
@@ -53,9 +56,9 @@ export function undo() {
  */
 export function redo() {
     if (window.__REDO_STACK__.length > 0) {
-        const command = window.__REDO_STACK__.pop();
-        command.execute();
-        window.__GLOBAL_HISTORY__.push(command);
+        const action = window.__REDO_STACK__.pop();
+        action.performAction();
+        window.__GLOBAL_HISTORY__.push(action);
         console.log('Global redo executed');
     } else {
         console.log('No command to redo');
