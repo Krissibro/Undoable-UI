@@ -70,12 +70,28 @@ export function redo() {
     }
 }
 
+function addGlobalUndoRedoShortcuts() {
+    document.addEventListener('keydown', function (event) {
+        // Check for Ctrl+Z or Cmd+Z (for Mac)
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+            event.preventDefault(); // Prevent native browser undo behavior
+            undo();
+        }
+        // Check for Ctrl+Y or Cmd+Y (for Mac)
+        else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+            event.preventDefault();
+            redo();
+        }
+    });
+}
+
 /**
  * Initialization function.
  * Scans the DOM for undoable elements and attaches their handlers.
  */
 export function init() {
     scanForUndoableElements();
+    addGlobalUndoRedoShortcuts()
     console.log('UndoableUI initialized');
 }
 
