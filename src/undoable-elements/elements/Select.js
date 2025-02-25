@@ -20,7 +20,7 @@ export class SelectAction extends Action {
     /**
      * Executes the action by setting the select element's value to the new value.
      */
-    execute() {
+    performAction() {
         this.element.value = this.newValue;
     }
 
