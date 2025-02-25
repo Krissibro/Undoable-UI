@@ -50,8 +50,9 @@ export class DateTime extends UndoableElement {
             this.oldValue = this.element.value;
         });
 
+
         // On change, create a new DateTimeAction if the value has changed.
-        this.element.addEventListener('change', (event) => {
+        const handler = (event) => {
             const previousValue = this.oldValue;
             const newValue = this.element.value;
             if (previousValue !== newValue) {
@@ -62,6 +63,11 @@ export class DateTime extends UndoableElement {
                 this.oldValue = newValue;
                 console.log('DateTime command recorded:', action);
             }
+        };
+
+        // Attach the same handler to both 'input' and 'change'
+        ['input', 'change'].forEach(type => {
+            this.element.addEventListener(type, handler);
         });
     }
 
