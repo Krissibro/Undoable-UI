@@ -6,18 +6,18 @@ export default {
     input: 'src/index.js', // Your library's entry point
     output: [
         {
-            file: 'dist/undoable-ui.cjs.js',
+            file: 'docs/dist/undoable-ui.cjs.js',
             format: 'cjs',        // CommonJS format for Node.js
             sourcemap: true,
         },
         {
-            file: 'dist/undoable-ui.umd.js',
+            file: 'docs/dist/undoable-ui.umd.js',
             format: 'umd',        // UMD format for browsers (global variable)
             name: 'UndoableUI',   // Global variable name
             sourcemap: true,
         },
         {
-            file: 'dist/undoable-ui.esm.js',
+            file: 'docs/dist/undoable-ui.esm.js',
             format: 'esm',        // ES Modules format for modern bundlers
             sourcemap: true,
         }
