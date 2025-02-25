@@ -26,6 +26,7 @@ export default {
         resolve(),   // Helps Rollup find modules in node_modules
         commonjs(),  // Converts CommonJS modules to ES6 so Rollup can include them
         babel({
+            babelHelpers: 'bundled',
             exclude: 'node_modules/**' // Don’t transpile external libraries
         })
     ]

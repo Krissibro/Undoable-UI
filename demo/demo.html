@@ -2,74 +2,113 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>UndoableUI Demo</title>
+    <title>UndoableUI Demo - Grid Pattern</title>
     <script src="../dist/undoable-ui.umd.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+            background: #f4f4f4;
+            text-align: center;
+        }
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            text-align: left; /* So content inside the container aligns normally */
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .controls button {
+            font-size: 16px;
+            padding: 8px 16px;
+            margin: 0 10px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .group {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .group h2 {
+            text-align: center;
+            margin-top: 0;
+            font-size: 18px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        .group label {
+            display: block;
+            margin: 6px 0;
+        }
+        .group input[type="range"],
+        .group input[type="date"],
+        .group input[type="time"],
+        .group input[type="datetime-local"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
-<h1>UndoableUI Demo</h1>
-<br>
-<button onclick="UndoableUI.undo()" style="font-size: 20px;">Undo</button>
-<button onclick="UndoableUI.redo()" style="font-size: 20px;">Redo</button>
-<br>
+<div class="container">
+    <h1>UndoableUI Demo</h1>
 
-<h3>Checkboxes</h3>
-<label>
-    <input type="checkbox" id="checkbox1" /> Option 1
-</label>
-<br>
-<label>
-    <input type="checkbox" id="checkbox2" /> Option 2
-</label>
-<br>
-<label>
-    <input type="checkbox" id="checkbox3" /> Option 3
-</label>
-<br>
-<label>
-    <input type="checkbox" id="checkbox4" /> Option 4
-</label>
+    <div class="controls">
+        <button onclick="UndoableUI.undo()">Undo</button>
+        <button onclick="UndoableUI.redo()">Redo</button>
+    </div>
 
-<h3>Radio Inputs (Group "group1")</h3>
-<label>
-    <input type="radio" name="group1" id="radio1" /> Radio 1
-</label>
-<br>
-<label>
-    <input type="radio" name="group1" id="radio2" /> Radio 2
-</label>
-<br>
-<label>
-    <input type="radio" name="group1" id="radio3" /> Radio 3
-</label>
-<br>
-<label>
-    <input type="radio" name="group1" id="radio4" /> Radio 4
-</label>
-
-<h3>Radio Inputs (Group "group2")</h3>
-<label>
-    <input type="radio" name="group2" id="radio5" /> Radio 1
-</label>
-<br>
-<label>
-    <input type="radio" name="group2" id="radio6" /> Radio 2
-</label>
-<br>
-<label>
-    <input type="radio" name="group2" id="radio7" /> Radio 3
-</label>
-<br>
-<label>
-    <input type="radio" name="group2" id="radio8" /> Radio 4
-</label>
-
-<h3>Range Input</h3>
-<label for="range1">Volume:</label>
-<input type="range" id="range1" min="0" max="100">
-
-<!-- Global undo/redo buttons -->
-
-
+    <div class="grid-container">
+        <div class="group">
+            <h2>Checkboxes</h2>
+            <label><input type="checkbox" id="checkbox1" /> Option 1</label>
+            <label><input type="checkbox" id="checkbox2" /> Option 2</label>
+            <label><input type="checkbox" id="checkbox3" /> Option 3</label>
+            <label><input type="checkbox" id="checkbox4" /> Option 4</label>
+        </div>
+        <div class="group">
+            <h2>Radio Inputs (Group "group1")</h2>
+            <label><input type="radio" name="group1" id="radio1" /> Radio 1</label>
+            <label><input type="radio" name="group1" id="radio2" /> Radio 2</label>
+            <label><input type="radio" name="group1" id="radio3" /> Radio 3</label>
+            <label><input type="radio" name="group1" id="radio4" /> Radio 4</label>
+        </div>
+        <div class="group">
+            <h2>Radio Inputs (Group "group2")</h2>
+            <label><input type="radio" name="group2" id="radio5" /> Radio 1</label>
+            <label><input type="radio" name="group2" id="radio6" /> Radio 2</label>
+            <label><input type="radio" name="group2" id="radio7" /> Radio 3</label>
+            <label><input type="radio" name="group2" id="radio8" /> Radio 4</label>
+        </div>
+        <div class="group">
+            <h2>Range Input</h2>
+            <label for="range1">Volume:</label>
+            <input type="range" id="range1" min="0" max="100" value="50">
+        </div>
+        <div class="group">
+            <h2>Date/Time Inputs</h2>
+            <label for="date1">Date:</label>
+            <input type="date" id="date1" value="2023-01-01">
+            <label for="time1">Time:</label>
+            <input type="time" id="time1" value="12:00">
+            <label for="datetime1">Datetime:</label>
+            <input type="datetime-local" id="datetime1" value="2023-01-01T12:00">
+        </div>
+    </div>
+</div>
 </body>
 </html>
-

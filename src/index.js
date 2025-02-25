@@ -1,7 +1,8 @@
 // src/index.js
 import { Checkbox } from './undoable-elements/elements/Checkbox.js';
-import {Radio} from "./undoable-elements/elements/Radio";
+import { Radio } from "./undoable-elements/elements/Radio";
 import { Range } from './undoable-elements/elements/Range.js';
+import { DateTime } from "./undoable-elements/elements/DateTime";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -24,6 +25,10 @@ const factoryMap = [
     {
         selector: 'input[type="range"]',
         factory: (element) => new Range(element),
+    },
+    {
+        selector: 'input[type="date"], input[type="time"], input[type="datetime-local"]',
+        factory: (element) => new DateTime(element),
     },
     // Future element types can be added here.
 ];
