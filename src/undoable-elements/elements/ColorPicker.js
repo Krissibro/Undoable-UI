@@ -51,7 +51,7 @@ export class ColorPicker extends UndoableElement {
         });
 
         // Define a single handler for both 'input' and 'change' events.
-        const handler = (event) => {
+        this.element.addEventListener('change', () => {
             const previousColor = this.oldColor;
             const newColor = this.element.value;
             if (previousColor !== newColor) {
@@ -61,11 +61,6 @@ export class ColorPicker extends UndoableElement {
                 this.oldColor = newColor;
                 console.log('Color command recorded:', action);
             }
-        };
-
-        // Attach the handler to both events to capture real-time and committed changes.
-        ['input', 'change'].forEach(type => {
-            this.element.addEventListener(type, handler);
         });
     }
 
