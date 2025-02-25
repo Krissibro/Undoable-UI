@@ -4,6 +4,7 @@ import { Radio } from "./undoable-elements/elements/Radio";
 import { Range } from './undoable-elements/elements/Range.js';
 import { DateTime } from "./undoable-elements/elements/DateTime";
 import { Select } from "./undoable-elements/elements/Select";
+import {ColorPicker} from "./undoable-elements/elements/ColorPicker";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -34,6 +35,10 @@ const factoryMap = [
     {
         selector: 'select',
         factory: (element) => new Select(element),
+    },
+    {
+        selector: 'input[type="color"]',
+        factory: (element) => new ColorPicker(element),
     },
     // Future element types can be added here.
 ];
