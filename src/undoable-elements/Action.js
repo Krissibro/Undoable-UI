@@ -1,6 +1,6 @@
 export class Action {
     /**
-     * @param {HTMLInputElement} element - The HTML element.
+     * @param {HTMLElement} element - The HTML element.
      */
     constructor(element) {
         this.element = element;

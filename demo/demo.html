@@ -13,9 +13,9 @@
             text-align: center;
         }
         .container {
-            max-width: 1500px;
+            max-width: 1500px; /* Set max width to 2000px */
             margin: 0 auto;
-            text-align: left; /* So content inside the container aligns normally */
+            text-align: left; /* Content inside the container aligns normally */
         }
         h1 {
             text-align: center;
@@ -57,7 +57,8 @@
         .group input[type="range"],
         .group input[type="date"],
         .group input[type="time"],
-        .group input[type="datetime-local"] {
+        .group input[type="datetime-local"],
+        .group select {
             width: 100%;
             margin: 5px 0;
         }
@@ -107,6 +108,16 @@
             <input type="time" id="time1" value="12:00">
             <label for="datetime1">Datetime:</label>
             <input type="datetime-local" id="datetime1" value="2023-01-01T12:00">
+        </div>
+        <div class="group">
+            <h2>Select Input</h2>
+            <label for="select1">Choose an option:</label>
+            <select id="select1">
+                <option value="option1">Option 1</option>
+                <option value="option2">Option 2</option>
+                <option value="option3">Option 3</option>
+                <option value="option4">Option 4</option>
+            </select>
         </div>
     </div>
 </div>
