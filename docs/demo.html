@@ -72,7 +72,8 @@
     <div class="controls">
         <button onclick="UndoableUI.undo()">Undo</button>
         <button onclick="UndoableUI.redo()">Redo</button>
-        <p>You can also use ctrl + z and ctrl + y to undo/redo</p>
+        <p>You can also use ctrl + z and ctrl + y to undo/redo.</p>
+        <p>The shortcuts only work when not in a modal, as native browser behaviour takes precedence when in one.</p>
     </div>
 
 
@@ -112,7 +113,6 @@
             <input type="time" id="time1" value="12:00">
             <label for="datetime1">Datetime:</label>
             <input type="datetime-local" id="datetime1" value="2023-01-01T12:00">
-            <p>Undo/redo only works when not in modals</p>
         </div>
         <div class="group">
             <h2>Select Input</h2>
@@ -128,7 +128,6 @@
             <h2>Color Picker</h2>
             <label for="color1">Pick a color:</label>
             <input type="color" id="color1" value="#ff0000">
-            <p>Undo/redo only works when not in the color picker modal</p>
         </div>
     </div>
 </div>

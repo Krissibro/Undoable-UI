@@ -656,7 +656,7 @@
         });
 
         // Define a single handler for both 'input' and 'change' events.
-        var handler = function handler(event) {
+        this.element.addEventListener('change', function () {
           var previousColor = _this3.oldColor;
           var newColor = _this3.element.value;
           if (previousColor !== newColor) {
@@ -666,11 +666,6 @@
             _this3.oldColor = newColor;
             console.log('Color command recorded:', action);
           }
-        };
-
-        // Attach the handler to both events to capture real-time and committed changes.
-        ['input', 'change'].forEach(function (type) {
-          _this3.element.addEventListener(type, handler);
         });
       }
 
