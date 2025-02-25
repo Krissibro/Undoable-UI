@@ -8,11 +8,11 @@
 <body>
 <h1>UndoableUI Demo</h1>
 <br>
-<button onclick="UndoableUI.undo()">Undo</button>
-<button onclick="UndoableUI.redo()">Redo</button>
+<button onclick="UndoableUI.undo()" style="font-size: 20px;">Undo</button>
+<button onclick="UndoableUI.redo()" style="font-size: 20px;">Redo</button>
 <br>
 
-<h2>Checkboxes</h2>
+<h3>Checkboxes</h3>
 <label>
     <input type="checkbox" id="checkbox1" /> Option 1
 </label>
@@ -62,6 +62,10 @@
 <label>
     <input type="radio" name="group2" id="radio8" /> Radio 4
 </label>
+
+<h3>Range Input</h3>
+<label for="range1">Volume:</label>
+<input type="range" id="range1" min="0" max="100">
 
 <!-- Global undo/redo buttons -->
 

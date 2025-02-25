@@ -1,6 +1,7 @@
 // src/index.js
 import { Checkbox } from './undoable-elements/elements/Checkbox.js';
 import {Radio} from "./undoable-elements/elements/Radio";
+import { Range } from './undoable-elements/elements/Range.js';
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -20,10 +21,16 @@ const factoryMap = [
         selector: 'input[type="radio"]',
         factory: (element) => new Radio(element),
     },
+    {
+        selector: 'input[type="range"]',
+        factory: (element) => new Range(element),
+    },
     // Future element types can be added here.
 ];
 
 // TODO: Could be more efficient by only scanning the DOM once.
+// If possible
+// TODO: Instead of attaching listeners to all elements, could use event delegation maybe.
 /**
  * Scan the DOM for undoable elements.
  * For each mapping in factoryMap, select all matching elements and create a handler.

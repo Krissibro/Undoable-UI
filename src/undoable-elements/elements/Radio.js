@@ -60,6 +60,7 @@ export class Radio extends UndoableElement {
         }
 
         // On focus, record the current selection for this radio group if not already recorded.
+        // The focus value is the initial value for the range action.
         this.element.addEventListener('focus', () => {
             const groupName = this.element.name;
             if (!groupName) return;
