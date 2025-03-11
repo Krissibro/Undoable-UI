@@ -5,6 +5,7 @@ import { Range } from './undoable-elements/elements/Range.js';
 import { DateTime } from "./undoable-elements/elements/DateTime";
 import { Select } from "./undoable-elements/elements/Select";
 import { ColorPicker } from "./undoable-elements/elements/ColorPicker";
+import { TextBox } from "./undoable-elements/elements/TextBox";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -16,6 +17,19 @@ window.__REDO_STACK__ = window.__REDO_STACK__ || [];
  * that takes a DOM element and returns an instance of an undoable handler.
  */
 const factoryMap = [
+    {
+        // Input types for text, search, email, url, number, tel + textarea
+        // (Skipping password)
+        selector: `input[type="text"],
+               input[type="search"],
+               input[type="email"],
+               input[type="url"],
+               input[type="number"],
+               input[type="tel"],
+               textarea,
+               [contenteditable="true"]`,
+        factory: (element) => new TextBox(element),
+    },
     {
         selector: 'input[type="checkbox"]',
         factory: (element) => new Checkbox(element),

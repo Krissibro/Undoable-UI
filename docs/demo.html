@@ -15,7 +15,7 @@
         .container {
             max-width: 1500px;
             margin: 0 auto;
-            text-align: left; /* Content inside the container aligns normally */
+            text-align: left;
         }
         h1 {
             text-align: center;
@@ -76,9 +76,39 @@
         <p>The shortcuts only work when not in a modal, as native browser behaviour takes precedence when in one.</p>
     </div>
 
-
-
     <div class="grid-container">
+        <!-- Text-Based Inputs -->
+        <div class="group">
+            <h2>Text-Based Inputs</h2>
+            <label>Text:
+                <input type="text" id="textbox1" placeholder="Type something here...">
+            </label>
+            <label>Search:
+                <input type="search" id="textbox2" placeholder="Search...">
+            </label>
+            <label>Email:
+                <input type="email" id="textbox3" placeholder="example@example.com">
+            </label>
+            <label>URL:
+                <input type="url" id="textbox4" placeholder="https://example.com">
+            </label>
+            <label>Number:
+                <input type="number" id="textbox5" placeholder="Enter a number">
+            </label>
+            <label>Tel:
+                <input type="tel" id="textbox6" placeholder="Phone number">
+            </label>
+            <label>Textarea: <br>
+                <textarea id="textarea1" rows="3" placeholder="Multi-line text"></textarea>
+            </label>
+            <label>Content Editable:
+                <div id="contentEditable1" contenteditable="true" style="border: 1px solid #ccc; min-height: 60px; padding: 5px;">
+                    Type some text here...
+                </div>
+            </label>
+        </div>
+
+        <!-- Existing Groups -->
         <div class="group">
             <h2>Checkboxes</h2>
             <label><input type="checkbox" id="checkbox1" /> Option 1</label>

@@ -683,6 +683,136 @@
     }]);
   }(UndoableElement);
 
+  /**
+   * TextBoxAction encapsulates a change in a text-based input or contenteditable element.
+   */
+  var TextBoxAction = /*#__PURE__*/function (_Action) {
+    /**
+     * @param {HTMLElement} element - The text-based element (input, textarea, or contenteditable).
+     * @param {string} previousValue - The text before the change.
+     * @param {string} newValue - The text after the change.
+     */
+    function TextBoxAction(element, previousValue, newValue) {
+      var _this;
+      _classCallCheck(this, TextBoxAction);
+      _this = _callSuper(this, TextBoxAction, [element]);
+      _this.previousValue = previousValue;
+      _this.newValue = newValue;
+      return _this;
+    }
+
+    /**
+     * performAction() sets the element's value/content to the new value.
+     */
+    _inherits(TextBoxAction, _Action);
+    return _createClass(TextBoxAction, [{
+      key: "performAction",
+      value: function performAction() {
+        if (this.isContentEditable()) {
+          this.element.innerText = this.newValue;
+        } else {
+          this.element.value = this.newValue;
+        }
+      }
+
+      /**
+       * undo() reverts the element's value/content to the previous value.
+       */
+    }, {
+      key: "undo",
+      value: function undo() {
+        if (this.isContentEditable()) {
+          this.element.innerText = this.previousValue;
+        } else {
+          this.element.value = this.previousValue;
+        }
+      }
+
+      /**
+       * Helper to check if the element is contenteditable.
+       */
+    }, {
+      key: "isContentEditable",
+      value: function isContentEditable() {
+        return this.element.isContentEditable || this.element.getAttribute('contenteditable') === 'true';
+      }
+    }]);
+  }(Action);
+
+  /**
+   * TextBox handles text-based inputs (text, search, email, url, number, tel, textarea)
+   * and contenteditable elements. It stores the old value on focus and creates
+   * an action on blur if the value changed.
+   */
+  var TextBox = /*#__PURE__*/function (_UndoableElement) {
+    function TextBox(element) {
+      var _this2;
+      _classCallCheck(this, TextBox);
+      _this2 = _callSuper(this, TextBox, [element]);
+      // We’ll skip password fields intentionally.
+      _this2.attachListeners();
+      return _this2;
+    }
+    _inherits(TextBox, _UndoableElement);
+    return _createClass(TextBox, [{
+      key: "attachListeners",
+      value: function attachListeners() {
+        var _this3 = this;
+        // Store the old value on focus.
+        this.element.addEventListener('focus', function () {
+          _this3.oldValue = _this3.getCurrentValue();
+        });
+
+        // On blur (or focusout for contenteditable), check if the value changed.
+        // If so, create an action and push it to the global history.
+        var eventType = this.isContentEditable() ? 'focusout' : 'blur';
+        this.element.addEventListener(eventType, function () {
+          var newValue = _this3.getCurrentValue();
+          if (_this3.oldValue !== newValue) {
+            var action = _this3.createAction(_this3.oldValue, newValue);
+            window.__GLOBAL_HISTORY__.push(action);
+            window.__REDO_STACK__.length = 0;
+            _this3.oldValue = newValue;
+            console.log('TextBox command recorded:', action);
+          }
+        });
+      }
+
+      /**
+       * Creates a TextBoxAction with the old and new values.
+       * @param {string} previousValue
+       * @param {string} newValue
+       * @returns {TextBoxAction}
+       */
+    }, {
+      key: "createAction",
+      value: function createAction(previousValue, newValue) {
+        return new TextBoxAction(this.element, previousValue, newValue);
+      }
+
+      /**
+       * Helper to retrieve the current text from the element.
+       */
+    }, {
+      key: "getCurrentValue",
+      value: function getCurrentValue() {
+        if (this.isContentEditable()) {
+          return this.element.innerText;
+        }
+        return this.element.value;
+      }
+
+      /**
+       * Helper to detect if element is contenteditable.
+       */
+    }, {
+      key: "isContentEditable",
+      value: function isContentEditable() {
+        return this.element.isContentEditable || this.element.getAttribute('contenteditable') === 'true';
+      }
+    }]);
+  }(UndoableElement);
+
   // src/index.js
 
   // Global history arrays
@@ -695,6 +825,13 @@
    * that takes a DOM element and returns an instance of an undoable handler.
    */
   var factoryMap = [{
+    // Input types for text, search, email, url, number, tel + textarea
+    // (Skipping password)
+    selector: "input[type=\"text\"],\n               input[type=\"search\"],\n               input[type=\"email\"],\n               input[type=\"url\"],\n               input[type=\"number\"],\n               input[type=\"tel\"],\n               textarea,\n               [contenteditable=\"true\"]",
+    factory: function factory(element) {
+      return new TextBox(element);
+    }
+  }, {
     selector: 'input[type="checkbox"]',
     factory: function factory(element) {
       return new Checkbox(element);
