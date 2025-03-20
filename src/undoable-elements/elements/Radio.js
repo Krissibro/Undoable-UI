@@ -23,6 +23,7 @@ export class RadioAction extends Action {
         this.newRadio.checked = true;
         if (this.previousRadio && this.previousRadio !== this.newRadio) {
             this.previousRadio.checked = false;
+            Radio.previousSelections[this.newRadio.name] = this.newRadio;
         }
     }
 
@@ -33,10 +34,12 @@ export class RadioAction extends Action {
         if (this.previousRadio) {
             this.previousRadio.checked = true;
             this.newRadio.checked = false;
+            Radio.previousSelections[this.previousRadio.name] = this.previousRadio;
         } else {
             // If there was no previous radio, simply uncheck the new one.
             this.newRadio.checked = false;
         }
+
     }
 }
 
@@ -47,36 +50,27 @@ export class RadioAction extends Action {
 export class Radio extends UndoableElement {
     constructor(element) {
         super(element);
-        if (this.element.type !== 'radio') {
-            throw new Error('Element is not a radio input.');
-        }
-        this.attachListeners();
-    }
 
-    attachListeners() {
         // Use a static property on the Radio class to store previous selections per group.
         if (!Radio.previousSelections) {
             Radio.previousSelections = {};
         }
 
-        // On focus, record the current selection for this radio group if not already recorded.
-        // The focus value is the initial value for the range action.
-        this.element.addEventListener('focus', () => {
-            const groupName = this.element.name;
-            if (!groupName) return;
-            if (this.element.checked) {
-                Radio.previousSelections[groupName] = this.element;
-            } else if (!Radio.previousSelections[groupName]) {
-                // Scan for any checked radio in the group.
-                const radios = document.querySelectorAll(`input[type="radio"][name="${groupName}"]`);
-                radios.forEach(radio => {
-                    if (radio.checked) {
-                        Radio.previousSelections[groupName] = radio;
-                    }
-                });
-            }
-        });
+        this.groupName = this.element.name;
 
+        if (this.groupName) {
+            const radios = document.querySelectorAll(`input[type="radio"][name="${this.groupName}"]`);
+            radios.forEach(radio => {
+                if (radio.checked) {
+                    Radio.previousSelections[this.groupName] = radio;
+                }
+            });
+        }
+        // TODO: What happens if the radio button does not have a group name?
+        this.attachListeners();
+    }
+
+    attachListeners() {
         // On change, create a RadioAction.
         this.element.addEventListener('change', () => {
             const groupName = this.element.name;
@@ -85,10 +79,7 @@ export class Radio extends UndoableElement {
             // Update stored previous selection to the current element.
             Radio.previousSelections[groupName] = this.element;
 
-            const action = this.createAction(previousRadio);
-            window.__GLOBAL_HISTORY__.push(action);
-            window.__REDO_STACK__.length = 0;
-            console.log('Radio command recorded:', action);
+            this.createAction(previousRadio);
         });
     }
 
@@ -98,6 +89,9 @@ export class Radio extends UndoableElement {
      * @returns {RadioAction}
      */
     createAction(previousRadio) {
-        return new RadioAction(this.element, previousRadio);
+        const action = new RadioAction(this.element, previousRadio);
+        window.__GLOBAL_HISTORY__.push(action);
+        window.__REDO_STACK__.length = 0;
+        console.log('Radio command recorded:', action);
     }
 }
