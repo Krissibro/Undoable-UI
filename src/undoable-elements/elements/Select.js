@@ -8,11 +8,13 @@ import { Action } from '../Action.js';
 export class SelectAction extends Action {
     /**
      * @param {HTMLSelectElement} selectElement - The <select> element.
+     * @param {Select} selectListener - The select listener instance.
      * @param {string} previousValue - The value before the change.
      * @param {string} newValue - The value after the change.
      */
-    constructor(selectElement, previousValue, newValue) {
+    constructor(selectElement, selectListener, previousValue, newValue) {
         super(selectElement);
+        this.selectListener = selectListener;
         this.previousValue = previousValue;
         this.newValue = newValue;
     }
@@ -21,6 +23,7 @@ export class SelectAction extends Action {
      * Executes the action by setting the select element's value to the new value.
      */
     redo() {
+        this.selectListener.oldValue = this.newValue;
         this.element.value = this.newValue;
     }
 
@@ -28,6 +31,7 @@ export class SelectAction extends Action {
      * Undoes the action by reverting the select element's value to the previous value.
      */
     undo() {
+        this.selectListener.oldValue = this.previousValue
         this.element.value = this.previousValue;
     }
 }
@@ -45,21 +49,12 @@ export class Select extends UndoableElement {
     }
 
     attachListeners() {
-        // On focus, capture the current (old) value.
-        this.element.addEventListener('focus', () => {
-            this.oldValue = this.element.value;
-        });
         // On change, record the new selection if it differs.
         this.element.addEventListener('change', () => {
             const previousValue = this.oldValue;
             const newValue = this.element.value;
             if (previousValue !== newValue) {
-                const action = this.createAction(previousValue, newValue);
-                window.__GLOBAL_HISTORY__.push(action);
-                window.__REDO_STACK__.length = 0; // Clear redo history.
-                // Update oldValue for subsequent changes.
-                this.oldValue = newValue;
-                console.log('Select command recorded:', action);
+                this.createAction(previousValue, newValue);
             }
         });
     }
@@ -71,6 +66,11 @@ export class Select extends UndoableElement {
      * @returns {SelectAction}
      */
     createAction(previousValue, newValue) {
-        return new SelectAction(this.element, previousValue, newValue);
+        const action = new SelectAction(this.element, this, previousValue, newValue);
+        window.__GLOBAL_HISTORY__.push(action);
+        window.__REDO_STACK__.length = 0; // Clear redo history.
+        // Update oldValue for subsequent changes.
+        this.oldValue = newValue;
+        console.log('Select command recorded:', action);
     }
 }

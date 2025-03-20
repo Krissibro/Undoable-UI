@@ -503,13 +503,15 @@ var DateTime = /*#__PURE__*/function (_UndoableElement) {
 var SelectAction = /*#__PURE__*/function (_Action) {
   /**
    * @param {HTMLSelectElement} selectElement - The <select> element.
+   * @param {Select} selectListener - The select listener instance.
    * @param {string} previousValue - The value before the change.
    * @param {string} newValue - The value after the change.
    */
-  function SelectAction(selectElement, previousValue, newValue) {
+  function SelectAction(selectElement, selectListener, previousValue, newValue) {
     var _this;
     _classCallCheck(this, SelectAction);
     _this = _callSuper(this, SelectAction, [selectElement]);
+    _this.selectListener = selectListener;
     _this.previousValue = previousValue;
     _this.newValue = newValue;
     return _this;
@@ -522,6 +524,7 @@ var SelectAction = /*#__PURE__*/function (_Action) {
   return _createClass(SelectAction, [{
     key: "redo",
     value: function redo() {
+      this.selectListener.oldValue = this.newValue;
       this.element.value = this.newValue;
     }
 
@@ -531,6 +534,7 @@ var SelectAction = /*#__PURE__*/function (_Action) {
   }, {
     key: "undo",
     value: function undo() {
+      this.selectListener.oldValue = this.previousValue;
       this.element.value = this.previousValue;
     }
   }]);
@@ -555,21 +559,12 @@ var Select = /*#__PURE__*/function (_UndoableElement) {
     key: "attachListeners",
     value: function attachListeners() {
       var _this3 = this;
-      // On focus, capture the current (old) value.
-      this.element.addEventListener('focus', function () {
-        _this3.oldValue = _this3.element.value;
-      });
       // On change, record the new selection if it differs.
       this.element.addEventListener('change', function () {
         var previousValue = _this3.oldValue;
         var newValue = _this3.element.value;
         if (previousValue !== newValue) {
-          var action = _this3.createAction(previousValue, newValue);
-          window.__GLOBAL_HISTORY__.push(action);
-          window.__REDO_STACK__.length = 0; // Clear redo history.
-          // Update oldValue for subsequent changes.
-          _this3.oldValue = newValue;
-          console.log('Select command recorded:', action);
+          _this3.createAction(previousValue, newValue);
         }
       });
     }
@@ -583,7 +578,12 @@ var Select = /*#__PURE__*/function (_UndoableElement) {
   }, {
     key: "createAction",
     value: function createAction(previousValue, newValue) {
-      return new SelectAction(this.element, previousValue, newValue);
+      var action = new SelectAction(this.element, this, previousValue, newValue);
+      window.__GLOBAL_HISTORY__.push(action);
+      window.__REDO_STACK__.length = 0; // Clear redo history.
+      // Update oldValue for subsequent changes.
+      this.oldValue = newValue;
+      console.log('Select command recorded:', action);
     }
   }]);
 }(UndoableElement);
