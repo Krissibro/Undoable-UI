@@ -98,7 +98,7 @@ export function undo() {
 export function redo() {
     if (window.__REDO_STACK__.length > 0) {
         const action = window.__REDO_STACK__.pop();
-        action.performAction();
+        action.redo();
         window.__GLOBAL_HISTORY__.push(action);
         console.log('Global redo executed');
     } else {
@@ -127,7 +127,7 @@ function addGlobalUndoRedoShortcuts() {
  */
 export function init() {
     scanForUndoableElements();
-    addGlobalUndoRedoShortcuts()
+    addGlobalUndoRedoShortcuts();
     console.log('UndoableUI initialized');
 }
 

@@ -20,7 +20,7 @@ export class ColorAction extends Action {
     /**
      * Executes the action by setting the input's value to the new color.
      */
-    performAction() {
+    redo() {
         this.element.value = this.newColor;
     }
 

@@ -19,7 +19,7 @@ export class RadioAction extends Action {
     /**
      * Executes the action by checking the new radio and unchecking the previous one (if present).
      */
-    performAction() {
+    redo() {
         this.newRadio.checked = true;
         if (this.previousRadio && this.previousRadio !== this.newRadio) {
             this.previousRadio.checked = false;

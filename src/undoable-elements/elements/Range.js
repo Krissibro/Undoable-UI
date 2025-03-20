@@ -8,11 +8,13 @@ import { Action } from '../Action.js';
 export class RangeAction extends Action {
     /**
      * @param {HTMLInputElement} range - The range input element.
+     * @param {Range} rangeListener - The range listener instance.
      * @param {number|string} previousValue - The value before the change.
      * @param {number|string} newValue - The value after the change.
      */
-    constructor(range, previousValue, newValue) {
+    constructor(range, rangeListener, previousValue, newValue) {
         super(range);
+        this.rangeListener = rangeListener;
         this.previousValue = previousValue;
         this.newValue = newValue;
     }
@@ -20,7 +22,8 @@ export class RangeAction extends Action {
     /**
      * Executes the action by setting the range's value to the new value.
      */
-    performAction() {
+    redo() {
+        this.rangeListener.oldValue = this.newValue;
         this.element.value = this.newValue;
     }
 
@@ -28,6 +31,7 @@ export class RangeAction extends Action {
      * Undoes the action by reverting the range's value to the previous value.
      */
     undo() {
+        this.rangeListener.oldValue = this.previousValue
         this.element.value = this.previousValue;
     }
 }
@@ -45,12 +49,6 @@ export class Range extends UndoableElement {
     }
 
     attachListeners() {
-        // When the range gains focus, record its current value.
-        // The focus value is the initial value for the range action.
-        this.element.addEventListener('focus', () => {
-            this.oldValue = this.element.value;
-        });
-
         // On change, create a RangeAction.
         this.element.addEventListener('change', (event) => {
             const previousValue = this.oldValue;
@@ -74,6 +72,6 @@ export class Range extends UndoableElement {
      * @returns {RangeAction}
      */
     createAction(previousValue, newValue) {
-        return new RangeAction(this.element, previousValue, newValue);
+        return new RangeAction(this.element, this, previousValue, newValue);
     }
 }

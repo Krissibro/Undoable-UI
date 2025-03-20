@@ -30,7 +30,7 @@ export class TextAction extends Action {
         this.newValue = newValue;
     }
 
-    performAction() {
+    redo() {
         setValue(this.element, this.newValue);
     }
 

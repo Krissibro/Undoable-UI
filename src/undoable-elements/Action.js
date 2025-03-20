@@ -6,8 +6,8 @@ export class Action {
         this.element = element;
     }
 
-    performAction() {
-        throw new Error("performAction() must be implemented by subclasses.");
+    redo() {
+        throw new Error("redo() must be implemented by subclasses.");
     }
 
     undo() {

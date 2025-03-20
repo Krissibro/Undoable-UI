@@ -16,7 +16,7 @@ export class CheckboxAction extends Action {
         this.newState = newState;
     }
 
-    performAction() {
+    redo() {
         this.element.checked = this.newState;
     }
 

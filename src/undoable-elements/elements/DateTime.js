@@ -20,7 +20,7 @@ export class DateTimeAction extends Action {
     /**
      * Executes the action by setting the input's value to the new value.
      */
-    performAction() {
+    redo() {
         this.element.value = this.newValue;
     }
 

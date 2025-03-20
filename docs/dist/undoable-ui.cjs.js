@@ -106,9 +106,9 @@ var Action = /*#__PURE__*/function () {
     this.element = element;
   }
   return _createClass(Action, [{
-    key: "performAction",
-    value: function performAction() {
-      throw new Error("performAction() must be implemented by subclasses.");
+    key: "redo",
+    value: function redo() {
+      throw new Error("redo() must be implemented by subclasses.");
     }
   }, {
     key: "undo",
@@ -137,8 +137,8 @@ var CheckboxAction = /*#__PURE__*/function (_Action) {
   }
   _inherits(CheckboxAction, _Action);
   return _createClass(CheckboxAction, [{
-    key: "performAction",
-    value: function performAction() {
+    key: "redo",
+    value: function redo() {
       this.element.checked = this.newState;
     }
   }, {
@@ -209,8 +209,8 @@ var RadioAction = /*#__PURE__*/function (_Action) {
    */
   _inherits(RadioAction, _Action);
   return _createClass(RadioAction, [{
-    key: "performAction",
-    value: function performAction() {
+    key: "redo",
+    value: function redo() {
       this.newRadio.checked = true;
       if (this.previousRadio && this.previousRadio !== this.newRadio) {
         this.previousRadio.checked = false;
@@ -311,13 +311,15 @@ var Radio = /*#__PURE__*/function (_UndoableElement) {
 var RangeAction = /*#__PURE__*/function (_Action) {
   /**
    * @param {HTMLInputElement} range - The range input element.
+   * @param {Range} rangeListener - The range listener instance.
    * @param {number|string} previousValue - The value before the change.
    * @param {number|string} newValue - The value after the change.
    */
-  function RangeAction(range, previousValue, newValue) {
+  function RangeAction(range, rangeListener, previousValue, newValue) {
     var _this;
     _classCallCheck(this, RangeAction);
     _this = _callSuper(this, RangeAction, [range]);
+    _this.rangeListener = rangeListener;
     _this.previousValue = previousValue;
     _this.newValue = newValue;
     return _this;
@@ -328,8 +330,9 @@ var RangeAction = /*#__PURE__*/function (_Action) {
    */
   _inherits(RangeAction, _Action);
   return _createClass(RangeAction, [{
-    key: "performAction",
-    value: function performAction() {
+    key: "redo",
+    value: function redo() {
+      this.rangeListener.oldValue = this.newValue;
       this.element.value = this.newValue;
     }
 
@@ -339,6 +342,7 @@ var RangeAction = /*#__PURE__*/function (_Action) {
   }, {
     key: "undo",
     value: function undo() {
+      this.rangeListener.oldValue = this.previousValue;
       this.element.value = this.previousValue;
     }
   }]);
@@ -363,12 +367,6 @@ var Range = /*#__PURE__*/function (_UndoableElement) {
     key: "attachListeners",
     value: function attachListeners() {
       var _this3 = this;
-      // When the range gains focus, record its current value.
-      // The focus value is the initial value for the range action.
-      this.element.addEventListener('focus', function () {
-        _this3.oldValue = _this3.element.value;
-      });
-
       // On change, create a RangeAction.
       this.element.addEventListener('change', function (event) {
         var previousValue = _this3.oldValue;
@@ -394,7 +392,7 @@ var Range = /*#__PURE__*/function (_UndoableElement) {
   }, {
     key: "createAction",
     value: function createAction(previousValue, newValue) {
-      return new RangeAction(this.element, previousValue, newValue);
+      return new RangeAction(this.element, this, previousValue, newValue);
     }
   }]);
 }(UndoableElement);
@@ -423,8 +421,8 @@ var DateTimeAction = /*#__PURE__*/function (_Action) {
    */
   _inherits(DateTimeAction, _Action);
   return _createClass(DateTimeAction, [{
-    key: "performAction",
-    value: function performAction() {
+    key: "redo",
+    value: function redo() {
       this.element.value = this.newValue;
     }
 
@@ -521,8 +519,8 @@ var SelectAction = /*#__PURE__*/function (_Action) {
    */
   _inherits(SelectAction, _Action);
   return _createClass(SelectAction, [{
-    key: "performAction",
-    value: function performAction() {
+    key: "redo",
+    value: function redo() {
       this.element.value = this.newValue;
     }
 
@@ -613,8 +611,8 @@ var ColorAction = /*#__PURE__*/function (_Action) {
    */
   _inherits(ColorAction, _Action);
   return _createClass(ColorAction, [{
-    key: "performAction",
-    value: function performAction() {
+    key: "redo",
+    value: function redo() {
       this.element.value = this.newColor;
     }
 
@@ -745,8 +743,8 @@ var TextAction = /*#__PURE__*/function (_Action) {
   }
   _inherits(TextAction, _Action);
   return _createClass(TextAction, [{
-    key: "performAction",
-    value: function performAction() {
+    key: "redo",
+    value: function redo() {
       setValue(this.element, this.newValue);
     }
   }, {
@@ -966,6 +964,7 @@ var TextBox = /*#__PURE__*/function (_UndoableElement) {
 // for simplicity, we attach these to the window so they are accessible by our modules
 window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
 window.__REDO_STACK__ = window.__REDO_STACK__ || [];
+window.isMouseDown = false;
 
 /**
  * Factory mapping: Each entry defines a CSS selector and a factory function
@@ -1055,7 +1054,7 @@ function undo() {
 function redo() {
   if (window.__REDO_STACK__.length > 0) {
     var action = window.__REDO_STACK__.pop();
-    action.performAction();
+    action.redo();
     window.__GLOBAL_HISTORY__.push(action);
     console.log('Global redo executed');
   } else {
@@ -1076,12 +1075,21 @@ function addGlobalUndoRedoShortcuts() {
     }
   });
 }
+function addMouseDownListeners() {
+  document.addEventListener('mousedown', function () {
+    return window.isMouseDown = true;
+  });
+  document.addEventListener('mouseup', function () {
+    return window.isMouseDown = false;
+  });
+}
 
 /**
  * Initialization function.
  * Scans the DOM for undoable elements and attaches their handlers.
  */
 function init() {
+  addMouseDownListeners();
   scanForUndoableElements();
   addGlobalUndoRedoShortcuts();
   console.log('UndoableUI initialized');
