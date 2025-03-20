@@ -37,19 +37,18 @@ export class Checkbox extends UndoableElement {
 
     attachListeners() {
         this.element.addEventListener('change', (event) => {
-            const action = this.createAction(event);
-            // Push the command to the global history.
-            window.__GLOBAL_HISTORY__.push(action);
-            // Clear redo stack
-            window.__REDO_STACK__.length = 0;
-            console.log('Checkbox command recorded:', action);
+            // For toggling, assume the previous state is the opposite of the current.
+            const newState = this.element.checked;
+            const previousState = !newState;
+            this.createAction(previousState, newState);
         });
     }
 
-    createAction(event) {
-        // For toggling, assume the previous state is the opposite of the current.
-        const newState = this.element.checked;
-        const previousState = !newState;
-        return new CheckboxAction(this.element, previousState, newState);
+    createAction(previousState, newState) {
+        const action = new CheckboxAction(this.element, previousState, newState);
+        window.__GLOBAL_HISTORY__.push(action);
+        // Clear redo stack
+        window.__REDO_STACK__.length = 0;
+        console.log('Checkbox command recorded:', action);
     }
 }
