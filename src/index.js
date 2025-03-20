@@ -12,6 +12,8 @@ import { TextBox } from "./undoable-elements/elements/TextBox";
 window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
 window.__REDO_STACK__ = window.__REDO_STACK__ || [];
 
+window.isMouseDown = false;
+
 /**
  * Factory mapping: Each entry defines a CSS selector and a factory function
  * that takes a DOM element and returns an instance of an undoable handler.
@@ -121,11 +123,17 @@ function addGlobalUndoRedoShortcuts() {
     });
 }
 
+function addMouseDownListeners() {
+    document.addEventListener('mousedown', () => window.isMouseDown = true);
+    document.addEventListener('mouseup',   () => window.isMouseDown = false);
+}
+
 /**
  * Initialization function.
  * Scans the DOM for undoable elements and attaches their handlers.
  */
 export function init() {
+    addMouseDownListeners();
     scanForUndoableElements();
     addGlobalUndoRedoShortcuts();
     console.log('UndoableUI initialized');

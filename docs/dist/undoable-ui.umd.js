@@ -375,18 +375,14 @@
           var newValue = _this3.element.value;
           // Only record an action if the value has actually changed.
           if (previousValue !== newValue) {
-            var action = _this3.createAction(previousValue, newValue);
-            window.__GLOBAL_HISTORY__.push(action);
-            window.__REDO_STACK__.length = 0;
-            // Update the oldValue to the new value for subsequent changes.
-            _this3.oldValue = newValue;
-            console.log('Range command recorded:', action);
+            _this3.createAction(previousValue, newValue);
           }
         });
       }
 
       /**
        * Creates a RangeAction using the current element's old and new values.
+       * Then adds the action to the global history.
        * @param {number|string} previousValue
        * @param {number|string} newValue
        * @returns {RangeAction}
@@ -394,7 +390,12 @@
     }, {
       key: "createAction",
       value: function createAction(previousValue, newValue) {
-        return new RangeAction(this.element, this, previousValue, newValue);
+        var action = new RangeAction(this.element, this, previousValue, newValue);
+        window.__GLOBAL_HISTORY__.push(action);
+        window.__REDO_STACK__.length = 0;
+        // Update the oldValue to the new value for subsequent changes.
+        this.oldValue = newValue;
+        console.log('Range command recorded:', action);
       }
     }]);
   }(UndoableElement);
@@ -596,13 +597,15 @@
   var ColorAction = /*#__PURE__*/function (_Action) {
     /**
      * @param {HTMLInputElement} colorElement - The color input element.
+     * @param {ColorPicker} colorPickerListener - The color picker listener instance.
      * @param {string} previousColor - The color before the change.
      * @param {string} newColor - The color after the change.
      */
-    function ColorAction(colorElement, previousColor, newColor) {
+    function ColorAction(colorElement, colorPickerListener, previousColor, newColor) {
       var _this;
       _classCallCheck(this, ColorAction);
       _this = _callSuper(this, ColorAction, [colorElement]);
+      _this.colorPickerListener = colorPickerListener;
       _this.previousColor = previousColor;
       _this.newColor = newColor;
       return _this;
@@ -615,6 +618,7 @@
     return _createClass(ColorAction, [{
       key: "redo",
       value: function redo() {
+        this.colorPickerListener.oldColor = this.newColor;
         this.element.value = this.newColor;
       }
 
@@ -624,6 +628,7 @@
     }, {
       key: "undo",
       value: function undo() {
+        this.colorPickerListener.oldColor = this.previousColor;
         this.element.value = this.previousColor;
       }
     }]);
@@ -648,27 +653,19 @@
       key: "attachListeners",
       value: function attachListeners() {
         var _this3 = this;
-        // Capture the current color when the element gains focus.
-        this.element.addEventListener('focus', function () {
-          _this3.oldColor = _this3.element.value;
-        });
-
         // Define a single handler for both 'input' and 'change' events.
         this.element.addEventListener('change', function () {
           var previousColor = _this3.oldColor;
           var newColor = _this3.element.value;
           if (previousColor !== newColor) {
-            var action = _this3.createAction(previousColor, newColor);
-            window.__GLOBAL_HISTORY__.push(action);
-            window.__REDO_STACK__.length = 0; // Clear redo history.
-            _this3.oldColor = newColor;
-            console.log('Color command recorded:', action);
+            _this3.createAction(previousColor, newColor);
           }
         });
       }
 
       /**
        * Creates a ColorAction using the previous and new color values.
+       * Then pushes the action to the global history.
        * @param {string} previousColor
        * @param {string} newColor
        * @returns {ColorAction}
@@ -676,7 +673,11 @@
     }, {
       key: "createAction",
       value: function createAction(previousColor, newColor) {
-        return new ColorAction(this.element, previousColor, newColor);
+        var action = new ColorAction(this.element, this, previousColor, newColor);
+        window.__GLOBAL_HISTORY__.push(action);
+        window.__REDO_STACK__.length = 0; // Clear redo history.
+        this.oldColor = newColor;
+        console.log('Color command recorded:', action);
       }
     }]);
   }(UndoableElement);

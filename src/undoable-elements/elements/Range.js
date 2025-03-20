@@ -55,23 +55,24 @@ export class Range extends UndoableElement {
             const newValue = this.element.value;
             // Only record an action if the value has actually changed.
             if (previousValue !== newValue) {
-                const action = this.createAction(previousValue, newValue);
-                window.__GLOBAL_HISTORY__.push(action);
-                window.__REDO_STACK__.length = 0;
-                // Update the oldValue to the new value for subsequent changes.
-                this.oldValue = newValue;
-                console.log('Range command recorded:', action);
+                this.createAction(previousValue, newValue);
             }
         });
     }
 
     /**
      * Creates a RangeAction using the current element's old and new values.
+     * Then adds the action to the global history.
      * @param {number|string} previousValue
      * @param {number|string} newValue
      * @returns {RangeAction}
      */
     createAction(previousValue, newValue) {
-        return new RangeAction(this.element, this, previousValue, newValue);
+        const action = new RangeAction(this.element, this, previousValue, newValue);
+        window.__GLOBAL_HISTORY__.push(action);
+        window.__REDO_STACK__.length = 0;
+        // Update the oldValue to the new value for subsequent changes.
+        this.oldValue = newValue;
+        console.log('Range command recorded:', action);
     }
 }
