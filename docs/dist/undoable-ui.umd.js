@@ -684,115 +684,6 @@
   }(UndoableElement);
 
   /**
-   * TextBoxAction encapsulates a change in a text-based input or contenteditable element.
-   */
-  var TextAction = /*#__PURE__*/function (_Action) {
-    /**
-     * @param {HTMLElement} element - The text-based element (input, textarea, or contenteditable).
-     * @param {string} oldValue - The text before the change.
-     * @param {string} newValue - The text after the change.
-     */
-    function TextAction(element, oldValue, newValue) {
-      var _this;
-      _classCallCheck(this, TextAction);
-      _this = _callSuper(this, TextAction, [element]);
-      _this.oldValue = oldValue;
-      _this.newValue = newValue;
-      return _this;
-    }
-    _inherits(TextAction, _Action);
-    return _createClass(TextAction, [{
-      key: "performAction",
-      value: function performAction() {
-        setValue(this.element, this.newValue);
-      }
-    }, {
-      key: "undo",
-      value: function undo() {
-        setValue(this.element, this.oldValue);
-      }
-    }]);
-  }(Action);
-
-  /**
-   * TextBox handles text-based inputs (text, search, email, url, number, tel, textarea)
-   * and contenteditable elements, allowing partial undo while focused, then merging
-   * all edits into one big action on blur.
-   */
-  var TextBox = /*#__PURE__*/function (_UndoableElement) {
-    function TextBox(element) {
-      var _this2;
-      _classCallCheck(this, TextBox);
-      _this2 = _callSuper(this, TextBox, [element]);
-      _this2.attachListeners();
-      return _this2;
-    }
-    _inherits(TextBox, _UndoableElement);
-    return _createClass(TextBox, [{
-      key: "attachListeners",
-      value: function attachListeners() {
-        var _this3 = this;
-        // We'll store the "focus start" value and partial actions
-        this.focusStartValue = null;
-        this.partialActions = [];
-        this.previousValue = null;
-
-        // On focus, record the initial text for merging later.
-        this.element.addEventListener('focus', function () {
-          _this3.focusStartValue = getValue(_this3.element);
-          _this3.partialActions = [];
-          _this3.previousValue = _this3.focusStartValue;
-        });
-
-        // On input, create partial actions so the user can undo while focused.
-        this.element.addEventListener('input', function () {
-          var oldVal = _this3.previousValue;
-          var newVal = getValue(_this3.element);
-          if (oldVal !== newVal) {
-            var action = new TextAction(_this3.element, oldVal, newVal);
-            window.__GLOBAL_HISTORY__.push(action);
-            window.__REDO_STACK__.length = 0;
-            _this3.partialActions.push(action);
-            _this3.previousValue = newVal;
-          }
-        });
-
-        // On blur (or focusout), remove partial actions and push one merged action
-        var blurEvent = isContentEditable(this.element) ? 'focusout' : 'blur';
-        this.element.addEventListener(blurEvent, function () {
-          var finalValue = getValue(_this3.element);
-
-          // If no change from focus start, do nothing
-          if (_this3.focusStartValue === finalValue) return;
-
-          // Remove partial actions from global history
-          while (_this3.partialActions.length > 0) {
-            var lastPartialAction = _this3.partialActions.pop();
-            // Attempt to remove 'last' from the top of global history
-            if (window.__GLOBAL_HISTORY__.includes(lastPartialAction)) {
-              var popped = window.__GLOBAL_HISTORY__.pop();
-              if (popped !== lastPartialAction) {
-                // Put it back if it's not the correct one
-                window.__GLOBAL_HISTORY__.push(popped);
-                break;
-              }
-            }
-          }
-          // Now push one merged action
-          var merged = new TextAction(_this3.element, _this3.focusStartValue, finalValue);
-          window.__GLOBAL_HISTORY__.push(merged);
-          window.__REDO_STACK__.length = 0;
-          console.log('Merged TextBox action recorded:', merged);
-
-          // Reset
-          _this3.focusStartValue = null;
-          _this3.previousValue = null;
-        });
-      }
-    }]);
-  }(UndoableElement);
-
-  /**
    * Check if the element is contenteditable.
    * @param {HTMLElement} element
    * @returns {boolean}
@@ -825,6 +716,251 @@
       element.value = val;
     }
   }
+
+  /**
+   * Time window (ms) to merge consecutive keystrokes into a single chunk
+   */
+  var CHUNK_MERGE_DELAY = 500;
+
+  /**
+   * Pressing these keys will break the current chunk immediately
+   */
+  var BOUNDARY_KEY_LIST = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+  /**
+   * TextAction represents a single edit from oldValue -> newValue
+   * for a text-based element (input, textarea, or contenteditable).
+   */
+  var TextAction = /*#__PURE__*/function (_Action) {
+    /**
+     * @param {HTMLElement} element - The text-based element.
+     * @param {string} oldValue - The text before the change.
+     * @param {string} newValue - The text after the change.
+     */
+    function TextAction(element, oldValue, newValue) {
+      var _this;
+      _classCallCheck(this, TextAction);
+      _this = _callSuper(this, TextAction, [element]);
+      _this.oldValue = oldValue;
+      _this.newValue = newValue;
+      return _this;
+    }
+    _inherits(TextAction, _Action);
+    return _createClass(TextAction, [{
+      key: "performAction",
+      value: function performAction() {
+        setValue(this.element, this.newValue);
+      }
+    }, {
+      key: "undo",
+      value: function undo() {
+        setValue(this.element, this.oldValue);
+      }
+    }]);
+  }(Action);
+
+  /**
+   * Manages partial text edits (chunks) while typing, then merges them
+   * into one final action on blur.
+   */
+  var TextChunkManager = /*#__PURE__*/function () {
+    function TextChunkManager(element, initialText) {
+      _classCallCheck(this, TextChunkManager);
+      this.element = element;
+      this.initialText = initialText; // text at the moment of focus
+      this.sessionEdits = []; // partial actions in this focus session
+      this.currentEdit = null; // the chunk currently being built
+      this.lastChunkTimestamp = 0; // last time we updated a chunk
+      this.boundaryKeyDetected = false;
+    }
+
+    /**
+     * Initialize or reset the chunking session (on focus).
+     */
+    return _createClass(TextChunkManager, [{
+      key: "startSession",
+      value: function startSession() {
+        this.sessionEdits = [];
+        this.currentEdit = null;
+        this.lastChunkTimestamp = 0;
+        this.boundaryKeyDetected = false;
+      }
+
+      /**
+       * Process a keydown event to detect boundary keys (Enter, arrows).
+       */
+    }, {
+      key: "processKeydown",
+      value: function processKeydown(event) {
+        if (BOUNDARY_KEY_LIST.includes(event.key)) {
+          // Finalize current chunk if user pressed a boundary key
+          this.finalizeCurrentEdit();
+          this.boundaryKeyDetected = true;
+        } else {
+          this.boundaryKeyDetected = false;
+        }
+      }
+
+      /**
+       * Process an input event to create or merge partial edits.
+       */
+    }, {
+      key: "processInput",
+      value: function processInput() {
+        var newValue = getValue(this.element);
+        var now = Date.now();
+        if (!this.currentEdit) {
+          // Start a new chunk for the first keystroke
+          this.startNewEdit(newValue);
+        } else {
+          // Check time since last update
+          var timeDelta = now - this.lastChunkTimestamp;
+          if (timeDelta < CHUNK_MERGE_DELAY && !this.boundaryKeyDetected) {
+            // Merge with current chunk
+            this.mergeIntoCurrentEdit(newValue);
+          } else {
+            // Finalize old chunk, start a new one
+            this.finalizeCurrentEdit();
+            this.startNewEdit(newValue);
+          }
+        }
+        this.lastChunkTimestamp = now;
+      }
+
+      /**
+       * Creates a new chunk from the last known text -> current text.
+       */
+    }, {
+      key: "startNewEdit",
+      value: function startNewEdit(newValue) {
+        // For the first chunk or if we've had partials before
+        // the oldValue is either the finalValue of the last chunk
+        // or the initial text at focus if none.
+        var oldVal = this.sessionEdits.length > 0 ? this.sessionEdits[this.sessionEdits.length - 1].newValue : this.initialText;
+        var action = new TextAction(this.element, oldVal, newValue);
+        window.__GLOBAL_HISTORY__.push(action);
+        window.__REDO_STACK__.length = 0;
+        this.sessionEdits.push(action);
+        this.currentEdit = action;
+      }
+
+      /**
+       * Merges the newValue into the current chunk action object.
+       */
+    }, {
+      key: "mergeIntoCurrentEdit",
+      value: function mergeIntoCurrentEdit(newValue) {
+        if (!this.currentEdit) return;
+
+        // Pop the top of the global history
+        var popped = window.__GLOBAL_HISTORY__.pop();
+        if (popped !== this.currentEdit) {
+          // Edge case: partial undos might have removed or changed the top
+          if (popped) {
+            // Put it back if mismatch
+            window.__GLOBAL_HISTORY__.push(popped);
+          }
+          return;
+        }
+
+        // Update current chunk's newValue
+        this.currentEdit.newValue = newValue;
+        // Re-push updated chunk
+        window.__GLOBAL_HISTORY__.push(this.currentEdit);
+
+        // Also update the sessionEdits array
+        this.sessionEdits[this.sessionEdits.length - 1].newValue = newValue;
+      }
+
+      /**
+       * Finalize the current chunk so subsequent input starts a new chunk.
+       */
+    }, {
+      key: "finalizeCurrentEdit",
+      value: function finalizeCurrentEdit() {
+        this.currentEdit = null;
+      }
+
+      /**
+       * On blur, unify partial actions into one big action: initialText -> finalValue.
+       */
+    }, {
+      key: "finalizeFocusSession",
+      value: function finalizeFocusSession(finalValue) {
+        // If no actual change, do nothing
+        if (this.initialText === finalValue) return;
+
+        // Remove partial actions from global history
+        while (this.sessionEdits.length > 0) {
+          var partial = this.sessionEdits.pop();
+          var idx = window.__GLOBAL_HISTORY__.indexOf(partial);
+          if (idx !== -1) {
+            window.__GLOBAL_HISTORY__.splice(idx, 1);
+          }
+        }
+
+        // Create one merged action
+        var mergedAction = new TextAction(this.element, this.initialText, finalValue);
+        window.__GLOBAL_HISTORY__.push(mergedAction);
+        window.__REDO_STACK__.length = 0;
+        console.log('Merged TextBox action recorded:', mergedAction);
+      }
+    }]);
+  }();
+  /**
+   * TextBox uses a TextChunkManager to handle partial text edits (chunks) while typing,
+   * then merges them into a single action when the user blurs the field.
+   */
+  var TextBox = /*#__PURE__*/function (_UndoableElement) {
+    function TextBox(element) {
+      var _this2;
+      _classCallCheck(this, TextBox);
+      _this2 = _callSuper(this, TextBox, [element]);
+      _this2.attachListeners();
+      return _this2;
+    }
+    _inherits(TextBox, _UndoableElement);
+    return _createClass(TextBox, [{
+      key: "attachListeners",
+      value: function attachListeners() {
+        var _this3 = this;
+        this.initialFocusValue = null;
+        this.chunkManager = null;
+
+        // On focus, start a new chunking session
+        this.element.addEventListener('focus', function () {
+          _this3.initialFocusValue = getValue(_this3.element);
+          _this3.chunkManager = new TextChunkManager(_this3.element, _this3.initialFocusValue);
+          _this3.chunkManager.startSession();
+        });
+
+        // On keydown, detect boundary keys
+        this.element.addEventListener('keydown', function (event) {
+          var _this3$chunkManager;
+          // If overriding native undo, you might handle Ctrl+Z here
+          (_this3$chunkManager = _this3.chunkManager) === null || _this3$chunkManager === void 0 || _this3$chunkManager.processKeydown(event);
+        });
+
+        // On input, create or merge partial actions
+        this.element.addEventListener('input', function () {
+          var _this3$chunkManager2;
+          (_this3$chunkManager2 = _this3.chunkManager) === null || _this3$chunkManager2 === void 0 || _this3$chunkManager2.processInput();
+        });
+
+        // On blur/focusout, unify partial actions into one merged action
+        var blurEvent = isContentEditable(this.element) ? 'focusout' : 'blur';
+        this.element.addEventListener(blurEvent, function () {
+          if (!_this3.chunkManager) return;
+          var finalValue = getValue(_this3.element);
+          _this3.chunkManager.finalizeFocusSession(finalValue);
+
+          // Reset
+          _this3.initialFocusValue = null;
+          _this3.chunkManager = null;
+        });
+      }
+    }]);
+  }(UndoableElement);
 
   // src/index.js
 

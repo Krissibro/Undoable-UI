@@ -1,12 +1,26 @@
 import { Action } from '../Action.js';
-import {UndoableElement} from "../UndoableElement";
+import { UndoableElement } from "../UndoableElement";
+import { isContentEditable, getValue, setValue } from "./TextElementHelpers";
+
 
 /**
- * TextBoxAction encapsulates a change in a text-based input or contenteditable element.
+ * Time window (ms) to merge consecutive keystrokes into a single chunk
+ */
+const CHUNK_MERGE_DELAY = 500;
+
+/**
+ * Pressing these keys will break the current chunk immediately
+ */
+const BOUNDARY_KEY_LIST = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+
+/**
+ * TextAction represents a single edit from oldValue -> newValue
+ * for a text-based element (input, textarea, or contenteditable).
  */
 export class TextAction extends Action {
     /**
-     * @param {HTMLElement} element - The text-based element (input, textarea, or contenteditable).
+     * @param {HTMLElement} element - The text-based element.
      * @param {string} oldValue - The text before the change.
      * @param {string} newValue - The text after the change.
      */
@@ -26,10 +40,152 @@ export class TextAction extends Action {
 }
 
 
+
+
+
 /**
- * TextBox handles text-based inputs (text, search, email, url, number, tel, textarea)
- * and contenteditable elements, allowing partial undo while focused, then merging
- * all edits into one big action on blur.
+ * Manages partial text edits (chunks) while typing, then merges them
+ * into one final action on blur.
+ */
+class TextChunkManager {
+    constructor(element, initialText) {
+        this.element = element;
+        this.initialText = initialText;  // text at the moment of focus
+        this.sessionEdits = [];         // partial actions in this focus session
+        this.currentEdit = null;        // the chunk currently being built
+        this.lastChunkTimestamp = 0;    // last time we updated a chunk
+        this.boundaryKeyDetected = false;
+    }
+
+    /**
+     * Initialize or reset the chunking session (on focus).
+     */
+    startSession() {
+        this.sessionEdits = [];
+        this.currentEdit = null;
+        this.lastChunkTimestamp = 0;
+        this.boundaryKeyDetected = false;
+    }
+
+    /**
+     * Process a keydown event to detect boundary keys (Enter, arrows).
+     */
+    processKeydown(event) {
+        if (BOUNDARY_KEY_LIST.includes(event.key)) {
+            // Finalize current chunk if user pressed a boundary key
+            this.finalizeCurrentEdit();
+            this.boundaryKeyDetected = true;
+        } else {
+            this.boundaryKeyDetected = false;
+        }
+    }
+
+    /**
+     * Process an input event to create or merge partial edits.
+     */
+    processInput() {
+        const newValue = getValue(this.element);
+        const now = Date.now();
+
+        if (!this.currentEdit) {
+            // Start a new chunk for the first keystroke
+            this.startNewEdit(newValue);
+        } else {
+            // Check time since last update
+            const timeDelta = now - this.lastChunkTimestamp;
+            if (timeDelta < CHUNK_MERGE_DELAY && !this.boundaryKeyDetected) {
+                // Merge with current chunk
+                this.mergeIntoCurrentEdit(newValue);
+            } else {
+                // Finalize old chunk, start a new one
+                this.finalizeCurrentEdit();
+                this.startNewEdit(newValue);
+            }
+        }
+
+        this.lastChunkTimestamp = now;
+    }
+
+    /**
+     * Creates a new chunk from the last known text -> current text.
+     */
+    startNewEdit(newValue) {
+        // For the first chunk or if we've had partials before
+        // the oldValue is either the finalValue of the last chunk
+        // or the initial text at focus if none.
+        const oldVal = this.sessionEdits.length > 0
+            ? this.sessionEdits[this.sessionEdits.length - 1].newValue
+            : this.initialText;
+
+        const action = new TextAction(this.element, oldVal, newValue);
+        window.__GLOBAL_HISTORY__.push(action);
+        window.__REDO_STACK__.length = 0;
+
+        this.sessionEdits.push(action);
+        this.currentEdit = action;
+    }
+
+    /**
+     * Merges the newValue into the current chunk action object.
+     */
+    mergeIntoCurrentEdit(newValue) {
+        if (!this.currentEdit) return;
+
+        // Pop the top of the global history
+        const popped = window.__GLOBAL_HISTORY__.pop();
+        if (popped !== this.currentEdit) {
+            // Edge case: partial undos might have removed or changed the top
+            if (popped) {
+                // Put it back if mismatch
+                window.__GLOBAL_HISTORY__.push(popped);
+            }
+            return;
+        }
+
+        // Update current chunk's newValue
+        this.currentEdit.newValue = newValue;
+        // Re-push updated chunk
+        window.__GLOBAL_HISTORY__.push(this.currentEdit);
+
+        // Also update the sessionEdits array
+        this.sessionEdits[this.sessionEdits.length - 1].newValue = newValue;
+    }
+
+    /**
+     * Finalize the current chunk so subsequent input starts a new chunk.
+     */
+    finalizeCurrentEdit() {
+        this.currentEdit = null;
+    }
+
+    /**
+     * On blur, unify partial actions into one big action: initialText -> finalValue.
+     */
+    finalizeFocusSession(finalValue) {
+        // If no actual change, do nothing
+        if (this.initialText === finalValue) return;
+
+        // Remove partial actions from global history
+        while (this.sessionEdits.length > 0) {
+            const partial = this.sessionEdits.pop();
+            const idx = window.__GLOBAL_HISTORY__.indexOf(partial);
+            if (idx !== -1) {
+                window.__GLOBAL_HISTORY__.splice(idx, 1);
+            }
+        }
+
+        // Create one merged action
+        const mergedAction = new TextAction(this.element, this.initialText, finalValue);
+        window.__GLOBAL_HISTORY__.push(mergedAction);
+        window.__REDO_STACK__.length = 0;
+
+        console.log('Merged TextBox action recorded:', mergedAction);
+    }
+}
+
+/**
+ * TextBox uses a TextChunkManager to handle partial text edits (chunks) while typing,
+ * then merges them into a single action when the user blurs the field.
  */
 export class TextBox extends UndoableElement {
     constructor(element) {
@@ -38,102 +194,38 @@ export class TextBox extends UndoableElement {
     }
 
     attachListeners() {
-        // We'll store the "focus start" value and partial actions
-        this.focusStartValue = null;
-        this.partialActions = [];
-        this.previousValue = null;
+        this.initialFocusValue = null;
+        this.chunkManager = null;
 
-
-        // On focus, record the initial text for merging later.
+        // On focus, start a new chunking session
         this.element.addEventListener('focus', () => {
-            this.focusStartValue = getValue(this.element);
-            this.partialActions = [];
-            this.previousValue = this.focusStartValue;
+            this.initialFocusValue = getValue(this.element);
+            this.chunkManager = new TextChunkManager(this.element, this.initialFocusValue);
+            this.chunkManager.startSession();
         });
 
+        // On keydown, detect boundary keys
+        this.element.addEventListener('keydown', (event) => {
+            // If overriding native undo, you might handle Ctrl+Z here
+            this.chunkManager?.processKeydown(event);
+        });
 
-        // On input, create partial actions so the user can undo while focused.
+        // On input, create or merge partial actions
         this.element.addEventListener('input', () => {
-            const oldVal = this.previousValue;
-            const newVal = getValue(this.element);
-
-            if (oldVal !== newVal) {
-                const action = new TextAction(this.element, oldVal, newVal);
-                window.__GLOBAL_HISTORY__.push(action);
-                window.__REDO_STACK__.length = 0;
-                this.partialActions.push(action);
-                this.previousValue = newVal;
-            }
+            this.chunkManager?.processInput();
         });
 
-
-        // On blur (or focusout), remove partial actions and push one merged action
+        // On blur/focusout, unify partial actions into one merged action
         const blurEvent = isContentEditable(this.element) ? 'focusout' : 'blur';
         this.element.addEventListener(blurEvent, () => {
+            if (!this.chunkManager) return;
             const finalValue = getValue(this.element);
-
-            // If no change from focus start, do nothing
-            if (this.focusStartValue === finalValue) return;
-
-            // Remove partial actions from global history
-            while (this.partialActions.length > 0) {
-                const lastPartialAction = this.partialActions.pop();
-                // Attempt to remove 'last' from the top of global history
-                if (window.__GLOBAL_HISTORY__.includes(lastPartialAction)) {
-                    const popped = window.__GLOBAL_HISTORY__.pop();
-                    if (popped !== lastPartialAction) {
-                        // Put it back if it's not the correct one
-                        window.__GLOBAL_HISTORY__.push(popped);
-                        break;
-                    }
-                }
-            }
-            // Now push one merged action
-            const merged = new TextAction(this.element, this.focusStartValue, finalValue);
-            window.__GLOBAL_HISTORY__.push(merged);
-            window.__REDO_STACK__.length = 0;
-
-            console.log('Merged TextBox action recorded:', merged);
+            this.chunkManager.finalizeFocusSession(finalValue);
 
             // Reset
-            this.focusStartValue = null;
-            this.previousValue = null;
+            this.initialFocusValue = null;
+            this.chunkManager = null;
         });
     }
 }
 
-
-
-/**
- * Check if the element is contenteditable.
- * @param {HTMLElement} element
- * @returns {boolean}
- */
-export function isContentEditable(element) {
-    return element.isContentEditable || element.getAttribute('contenteditable') === 'true';
-}
-
-/**
- * Retrieve the current text from an element, either value or innerText.
- * @param {HTMLElement} element
- * @returns {string}
- */
-export function getValue(element) {
-    if (isContentEditable(element)) {
-        return element.innerText;
-    }
-    return element.value;
-}
-
-/**
- * Set the text of an element, either value or innerText.
- * @param {HTMLElement} element
- * @param {string} val
- */
-export function setValue(element, val) {
-    if (isContentEditable(element)) {
-        element.innerText = val;
-    } else {
-        element.value = val;
-    }
-}
