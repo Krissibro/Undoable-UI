@@ -4,106 +4,136 @@ import {UndoableElement} from "../UndoableElement";
 /**
  * TextBoxAction encapsulates a change in a text-based input or contenteditable element.
  */
-export class TextBoxAction extends Action {
+export class TextAction extends Action {
     /**
      * @param {HTMLElement} element - The text-based element (input, textarea, or contenteditable).
-     * @param {string} previousValue - The text before the change.
+     * @param {string} oldValue - The text before the change.
      * @param {string} newValue - The text after the change.
      */
-    constructor(element, previousValue, newValue) {
+    constructor(element, oldValue, newValue) {
         super(element);
-        this.previousValue = previousValue;
+        this.oldValue = oldValue;
         this.newValue = newValue;
     }
 
-    /**
-     * performAction() sets the element's value/content to the new value.
-     */
     performAction() {
-        if (this.isContentEditable()) {
-            this.element.innerText = this.newValue;
-        } else {
-            this.element.value = this.newValue;
-        }
+        setValue(this.element, this.newValue);
     }
 
-    /**
-     * undo() reverts the element's value/content to the previous value.
-     */
     undo() {
-        if (this.isContentEditable()) {
-            this.element.innerText = this.previousValue;
-        } else {
-            this.element.value = this.previousValue;
-        }
-    }
-
-    /**
-     * Helper to check if the element is contenteditable.
-     */
-    isContentEditable() {
-        return this.element.isContentEditable || this.element.getAttribute('contenteditable') === 'true';
+        setValue(this.element, this.oldValue);
     }
 }
 
 
 /**
  * TextBox handles text-based inputs (text, search, email, url, number, tel, textarea)
- * and contenteditable elements. It stores the old value on focus and creates
- * an action on blur if the value changed.
+ * and contenteditable elements, allowing partial undo while focused, then merging
+ * all edits into one big action on blur.
  */
 export class TextBox extends UndoableElement {
     constructor(element) {
         super(element);
-        // We’ll skip password fields intentionally.
         this.attachListeners();
     }
 
     attachListeners() {
-        // Store the old value on focus.
+        // We'll store the "focus start" value and partial actions
+        this.focusStartValue = null;
+        this.partialActions = [];
+        this.previousValue = null;
+
+
+        // On focus, record the initial text for merging later.
         this.element.addEventListener('focus', () => {
-            this.oldValue = this.getCurrentValue();
+            this.focusStartValue = getValue(this.element);
+            this.partialActions = [];
+            this.previousValue = this.focusStartValue;
         });
 
-        // On blur (or focusout for contenteditable), check if the value changed.
-        // If so, create an action and push it to the global history.
-        const eventType = this.isContentEditable() ? 'focusout' : 'blur';
-        this.element.addEventListener(eventType, () => {
-            const newValue = this.getCurrentValue();
-            if (this.oldValue !== newValue) {
-                const action = this.createAction(this.oldValue, newValue);
+
+        // On input, create partial actions so the user can undo while focused.
+        this.element.addEventListener('input', () => {
+            const oldVal = this.previousValue;
+            const newVal = getValue(this.element);
+
+            if (oldVal !== newVal) {
+                const action = new TextAction(this.element, oldVal, newVal);
                 window.__GLOBAL_HISTORY__.push(action);
                 window.__REDO_STACK__.length = 0;
-                this.oldValue = newValue;
-                console.log('TextBox command recorded:', action);
+                this.partialActions.push(action);
+                this.previousValue = newVal;
             }
         });
-    }
 
-    /**
-     * Creates a TextBoxAction with the old and new values.
-     * @param {string} previousValue
-     * @param {string} newValue
-     * @returns {TextBoxAction}
-     */
-    createAction(previousValue, newValue) {
-        return new TextBoxAction(this.element, previousValue, newValue);
-    }
 
-    /**
-     * Helper to retrieve the current text from the element.
-     */
-    getCurrentValue() {
-        if (this.isContentEditable()) {
-            return this.element.innerText;
-        }
-        return this.element.value;
-    }
+        // On blur (or focusout), remove partial actions and push one merged action
+        const blurEvent = isContentEditable(this.element) ? 'focusout' : 'blur';
+        this.element.addEventListener(blurEvent, () => {
+            const finalValue = getValue(this.element);
 
-    /**
-     * Helper to detect if element is contenteditable.
-     */
-    isContentEditable() {
-        return this.element.isContentEditable || this.element.getAttribute('contenteditable') === 'true';
+            // If no change from focus start, do nothing
+            if (this.focusStartValue === finalValue) return;
+
+            // Remove partial actions from global history
+            while (this.partialActions.length > 0) {
+                const lastPartialAction = this.partialActions.pop();
+                // Attempt to remove 'last' from the top of global history
+                if (window.__GLOBAL_HISTORY__.includes(lastPartialAction)) {
+                    const popped = window.__GLOBAL_HISTORY__.pop();
+                    if (popped !== lastPartialAction) {
+                        // Put it back if it's not the correct one
+                        window.__GLOBAL_HISTORY__.push(popped);
+                        break;
+                    }
+                }
+            }
+            // Now push one merged action
+            const merged = new TextAction(this.element, this.focusStartValue, finalValue);
+            window.__GLOBAL_HISTORY__.push(merged);
+            window.__REDO_STACK__.length = 0;
+
+            console.log('Merged TextBox action recorded:', merged);
+
+            // Reset
+            this.focusStartValue = null;
+            this.previousValue = null;
+        });
+    }
+}
+
+
+
+/**
+ * Check if the element is contenteditable.
+ * @param {HTMLElement} element
+ * @returns {boolean}
+ */
+export function isContentEditable(element) {
+    return element.isContentEditable || element.getAttribute('contenteditable') === 'true';
+}
+
+/**
+ * Retrieve the current text from an element, either value or innerText.
+ * @param {HTMLElement} element
+ * @returns {string}
+ */
+export function getValue(element) {
+    if (isContentEditable(element)) {
+        return element.innerText;
+    }
+    return element.value;
+}
+
+/**
+ * Set the text of an element, either value or innerText.
+ * @param {HTMLElement} element
+ * @param {string} val
+ */
+export function setValue(element, val) {
+    if (isContentEditable(element)) {
+        element.innerText = val;
+    } else {
+        element.value = val;
     }
 }
