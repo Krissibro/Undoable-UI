@@ -49,12 +49,6 @@ export class DateTime extends UndoableElement {
     }
 
     attachListeners() {
-        // Use focus to capture the starting (old) value.
-        this.element.addEventListener('focus', () => {
-            this.oldValue = this.element.value;
-        });
-
-
         // On change, create a new DateTimeAction if the value has changed.
         const handler = (event) => {
             const previousValue = this.oldValue;
