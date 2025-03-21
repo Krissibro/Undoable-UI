@@ -176,7 +176,6 @@ var Checkbox = /*#__PURE__*/function (_UndoableElement) {
       window.__GLOBAL_HISTORY__.push(action);
       // Clear redo stack
       window.__REDO_STACK__.length = 0;
-      console.log('Checkbox command recorded:', action);
     }
   }]);
 }(UndoableElement);
@@ -209,8 +208,8 @@ var RadioAction = /*#__PURE__*/function (_Action) {
       this.newRadio.checked = true;
       if (this.previousRadio && this.previousRadio !== this.newRadio) {
         this.previousRadio.checked = false;
-        Radio.previousSelections[this.newRadio.name] = this.newRadio;
       }
+      Radio.previousSelections[this.newRadio.name] = this.newRadio;
     }
 
     /**
@@ -226,6 +225,7 @@ var RadioAction = /*#__PURE__*/function (_Action) {
       } else {
         // If there was no previous radio, simply uncheck the new one.
         this.newRadio.checked = false;
+        Radio.previousSelections[this.newRadio.name] = null;
       }
     }
   }]);
@@ -285,7 +285,6 @@ var Radio = /*#__PURE__*/function (_UndoableElement) {
       var action = new RadioAction(this.element, previousRadio);
       window.__GLOBAL_HISTORY__.push(action);
       window.__REDO_STACK__.length = 0;
-      console.log('Radio command recorded:', action);
     }
   }]);
 }(UndoableElement);
@@ -379,7 +378,6 @@ var Range = /*#__PURE__*/function (_UndoableElement) {
       window.__REDO_STACK__.length = 0;
       // Update the oldValue to the new value for subsequent changes.
       this.oldValue = newValue;
-      console.log('Range command recorded:', action);
     }
   }]);
 }(UndoableElement);
@@ -391,13 +389,15 @@ var Range = /*#__PURE__*/function (_UndoableElement) {
 var DateTimeAction = /*#__PURE__*/function (_Action) {
   /**
    * @param {HTMLInputElement} element - The date/time input element.
+   * @param {DateTime} dateTimeListener - The DateTime instance.
    * @param {string} previousValue - The value before the change.
    * @param {string} newValue - The value after the change.
    */
-  function DateTimeAction(element, previousValue, newValue) {
+  function DateTimeAction(element, dateTimeListener, previousValue, newValue) {
     var _this;
     _classCallCheck(this, DateTimeAction);
     _this = _callSuper(this, DateTimeAction, [element]);
+    _this.dateTimeListener = dateTimeListener;
     _this.previousValue = previousValue;
     _this.newValue = newValue;
     return _this;
@@ -410,6 +410,7 @@ var DateTimeAction = /*#__PURE__*/function (_Action) {
   return _createClass(DateTimeAction, [{
     key: "redo",
     value: function redo() {
+      this.dateTimeListener.oldValue = this.newValue;
       this.element.value = this.newValue;
     }
 
@@ -419,6 +420,7 @@ var DateTimeAction = /*#__PURE__*/function (_Action) {
   }, {
     key: "undo",
     value: function undo() {
+      this.dateTimeListener.oldValue = this.previousValue;
       this.element.value = this.previousValue;
     }
   }]);
@@ -453,12 +455,7 @@ var DateTime = /*#__PURE__*/function (_UndoableElement) {
         var previousValue = _this3.oldValue;
         var newValue = _this3.element.value;
         if (previousValue !== newValue) {
-          var action = _this3.createAction(previousValue, newValue);
-          window.__GLOBAL_HISTORY__.push(action);
-          window.__REDO_STACK__.length = 0; // Clear redo history.
-          // Update oldValue to the new value.
-          _this3.oldValue = newValue;
-          console.log('DateTime command recorded:', action);
+          _this3.createAction(previousValue, newValue);
         }
       };
 
@@ -477,7 +474,11 @@ var DateTime = /*#__PURE__*/function (_UndoableElement) {
   }, {
     key: "createAction",
     value: function createAction(previousValue, newValue) {
-      return new DateTimeAction(this.element, previousValue, newValue);
+      var action = new DateTimeAction(this.element, this, previousValue, newValue);
+      window.__GLOBAL_HISTORY__.push(action);
+      window.__REDO_STACK__.length = 0; // Clear redo history.
+      // Update oldValue to the new value.
+      this.oldValue = newValue;
     }
   }]);
 }(UndoableElement);
@@ -569,7 +570,6 @@ var Select = /*#__PURE__*/function (_UndoableElement) {
       window.__REDO_STACK__.length = 0; // Clear redo history.
       // Update oldValue for subsequent changes.
       this.oldValue = newValue;
-      console.log('Select command recorded:', action);
     }
   }]);
 }(UndoableElement);
@@ -661,7 +661,6 @@ var ColorPicker = /*#__PURE__*/function (_UndoableElement) {
       window.__GLOBAL_HISTORY__.push(action);
       window.__REDO_STACK__.length = 0; // Clear redo history.
       this.oldColor = newColor;
-      console.log('Color command recorded:', action);
     }
   }]);
 }(UndoableElement);
@@ -886,7 +885,6 @@ var TextChunkManager = /*#__PURE__*/function () {
       var mergedAction = new TextAction(this.element, this.initialText, finalValue);
       window.__GLOBAL_HISTORY__.push(mergedAction);
       window.__REDO_STACK__.length = 0;
-      console.log('Merged TextBox action recorded:', mergedAction);
     }
   }]);
 }();
@@ -1029,9 +1027,6 @@ function undo() {
     var action = window.__GLOBAL_HISTORY__.pop();
     action.undo();
     window.__REDO_STACK__.push(action);
-    console.log('Global undo executed');
-  } else {
-    console.log('No command to undo');
   }
 }
 
@@ -1043,9 +1038,6 @@ function redo() {
     var action = window.__REDO_STACK__.pop();
     action.redo();
     window.__GLOBAL_HISTORY__.push(action);
-    console.log('Global redo executed');
-  } else {
-    console.log('No command to redo');
   }
 }
 function addGlobalUndoRedoShortcuts() {
@@ -1079,7 +1071,6 @@ function init() {
   addMouseDownListeners();
   scanForUndoableElements();
   addGlobalUndoRedoShortcuts();
-  console.log('UndoableUI initialized');
 }
 
 // Auto-initialize when DOM is ready.
