@@ -8,11 +8,13 @@ import { Action } from '../Action.js';
 export class DateTimeAction extends Action {
     /**
      * @param {HTMLInputElement} element - The date/time input element.
+     * @param {DateTime} dateTimeListener - The DateTime instance.
      * @param {string} previousValue - The value before the change.
      * @param {string} newValue - The value after the change.
      */
-    constructor(element, previousValue, newValue) {
+    constructor(element, dateTimeListener, previousValue, newValue) {
         super(element);
+        this.dateTimeListener = dateTimeListener;
         this.previousValue = previousValue;
         this.newValue = newValue;
     }
@@ -21,6 +23,7 @@ export class DateTimeAction extends Action {
      * Executes the action by setting the input's value to the new value.
      */
     redo() {
+        this.dateTimeListener.oldValue = this.newValue;
         this.element.value = this.newValue;
     }
 
@@ -28,6 +31,7 @@ export class DateTimeAction extends Action {
      * Undoes the action by reverting the input's value to the previous value.
      */
     undo() {
+        this.dateTimeListener.oldValue = this.previousValue;
         this.element.value = this.previousValue;
     }
 }
@@ -56,11 +60,7 @@ export class DateTime extends UndoableElement {
             const previousValue = this.oldValue;
             const newValue = this.element.value;
             if (previousValue !== newValue) {
-                const action = this.createAction(previousValue, newValue);
-                window.__GLOBAL_HISTORY__.push(action);
-                window.__REDO_STACK__.length = 0; // Clear redo history.
-                // Update oldValue to the new value.
-                this.oldValue = newValue;
+                this.createAction(previousValue, newValue);
             }
         };
 
@@ -77,6 +77,10 @@ export class DateTime extends UndoableElement {
      * @returns {DateTimeAction}
      */
     createAction(previousValue, newValue) {
-        return new DateTimeAction(this.element, previousValue, newValue);
+        const action = new DateTimeAction(this.element, this, previousValue, newValue);
+        window.__GLOBAL_HISTORY__.push(action);
+        window.__REDO_STACK__.length = 0; // Clear redo history.
+        // Update oldValue to the new value.
+        this.oldValue = newValue;
     }
 }
