@@ -178,8 +178,6 @@ class TextChunkManager {
         const mergedAction = new TextAction(this.element, this.initialText, finalValue);
         window.__GLOBAL_HISTORY__.push(mergedAction);
         window.__REDO_STACK__.length = 0;
-
-        console.log('Merged TextBox action recorded:', mergedAction);
     }
 }
 

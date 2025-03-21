@@ -71,6 +71,5 @@ export class ColorPicker extends UndoableElement {
         window.__GLOBAL_HISTORY__.push(action);
         window.__REDO_STACK__.length = 0; // Clear redo history.
         this.oldColor = newColor;
-        console.log('Color command recorded:', action);
     }
 }

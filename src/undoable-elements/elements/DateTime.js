@@ -61,7 +61,6 @@ export class DateTime extends UndoableElement {
                 window.__REDO_STACK__.length = 0; // Clear redo history.
                 // Update oldValue to the new value.
                 this.oldValue = newValue;
-                console.log('DateTime command recorded:', action);
             }
         };
 

@@ -23,8 +23,8 @@ export class RadioAction extends Action {
         this.newRadio.checked = true;
         if (this.previousRadio && this.previousRadio !== this.newRadio) {
             this.previousRadio.checked = false;
-            Radio.previousSelections[this.newRadio.name] = this.newRadio;
         }
+        Radio.previousSelections[this.newRadio.name] = this.newRadio;
     }
 
     /**
@@ -38,6 +38,7 @@ export class RadioAction extends Action {
         } else {
             // If there was no previous radio, simply uncheck the new one.
             this.newRadio.checked = false;
+            Radio.previousSelections[this.newRadio.name] = null;
         }
 
     }
@@ -92,6 +93,5 @@ export class Radio extends UndoableElement {
         const action = new RadioAction(this.element, previousRadio);
         window.__GLOBAL_HISTORY__.push(action);
         window.__REDO_STACK__.length = 0;
-        console.log('Radio command recorded:', action);
     }
 }

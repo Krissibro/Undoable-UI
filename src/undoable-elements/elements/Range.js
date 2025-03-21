@@ -73,6 +73,5 @@ export class Range extends UndoableElement {
         window.__REDO_STACK__.length = 0;
         // Update the oldValue to the new value for subsequent changes.
         this.oldValue = newValue;
-        console.log('Range command recorded:', action);
     }
 }

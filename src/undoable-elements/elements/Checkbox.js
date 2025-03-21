@@ -49,6 +49,5 @@ export class Checkbox extends UndoableElement {
         window.__GLOBAL_HISTORY__.push(action);
         // Clear redo stack
         window.__REDO_STACK__.length = 0;
-        console.log('Checkbox command recorded:', action);
     }
 }

@@ -71,6 +71,5 @@ export class Select extends UndoableElement {
         window.__REDO_STACK__.length = 0; // Clear redo history.
         // Update oldValue for subsequent changes.
         this.oldValue = newValue;
-        console.log('Select command recorded:', action);
     }
 }

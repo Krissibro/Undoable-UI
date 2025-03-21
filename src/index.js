@@ -88,9 +88,6 @@ export function undo() {
         const action = window.__GLOBAL_HISTORY__.pop();
         action.undo();
         window.__REDO_STACK__.push(action);
-        console.log('Global undo executed');
-    } else {
-        console.log('No command to undo');
     }
 }
 
@@ -102,9 +99,6 @@ export function redo() {
         const action = window.__REDO_STACK__.pop();
         action.redo();
         window.__GLOBAL_HISTORY__.push(action);
-        console.log('Global redo executed');
-    } else {
-        console.log('No command to redo');
     }
 }
 
@@ -136,7 +130,6 @@ export function init() {
     addMouseDownListeners();
     scanForUndoableElements();
     addGlobalUndoRedoShortcuts();
-    console.log('UndoableUI initialized');
 }
 
 // Auto-initialize when DOM is ready.
