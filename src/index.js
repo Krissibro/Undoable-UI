@@ -5,7 +5,9 @@ import { Range } from './undoable-elements/elements/Range.js';
 import { DateTime } from "./undoable-elements/elements/DateTime";
 import { Select } from "./undoable-elements/elements/Select";
 import { ColorPicker } from "./undoable-elements/elements/ColorPicker";
+import { TextBoxCollapseActions } from "./undoable-elements/elements/TextBoxCollapseActions";
 import { TextBox } from "./undoable-elements/elements/TextBox";
+import { getConfig } from "./config";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -14,50 +16,10 @@ window.__REDO_STACK__ = window.__REDO_STACK__ || [];
 
 window.isMouseDown = false;
 
-/**
- * Factory mapping: Each entry defines a CSS selector and a factory function
- * that takes a DOM element and returns an instance of an undoable handler.
- */
-const factoryMap = [
-    {
-        // Input types for text, search, email, url, number, tel + textarea
-        // (Skipping password)
-        selector: `input[type="text"],
-               input[type="search"],
-               input[type="email"],
-               input[type="url"],
-               input[type="number"],
-               input[type="tel"],
-               textarea,
-               [contenteditable="true"]`,
-        factory: (element) => new TextBox(element),
-    },
-    {
-        selector: 'input[type="checkbox"]',
-        factory: (element) => new Checkbox(element),
-    },
-    {
-        selector: 'input[type="radio"]',
-        factory: (element) => new Radio(element),
-    },
-    {
-        selector: 'input[type="range"]',
-        factory: (element) => new Range(element),
-    },
-    {
-        selector: 'input[type="date"], input[type="time"], input[type="datetime-local"]',
-        factory: (element) => new DateTime(element),
-    },
-    {
-        selector: 'select',
-        factory: (element) => new Select(element),
-    },
-    {
-        selector: 'input[type="color"]',
-        factory: (element) => new ColorPicker(element),
-    },
-    // Future element types can be added here.
-];
+let config;
+let factoryMap;
+
+
 
 // TODO: Could be more efficient by only scanning the DOM once.
 // If possible
@@ -126,7 +88,57 @@ function addMouseDownListeners() {
  * Initialization function.
  * Scans the DOM for undoable elements and attaches their handlers.
  */
-export function init() {
+export async function init() {
+    config = await getConfig();
+
+    /**
+     * Factory mapping: Each entry defines a CSS selector and a factory function
+     * that takes a DOM element and returns an instance of an undoable handler.
+     */
+    const factoryMap = [
+        {
+            // Input types for text, search, email, url, number, tel + textarea
+            // (Skipping password)
+            selector: `input[type="text"],
+               input[type="search"],
+               input[type="email"],
+               input[type="url"],
+               input[type="number"],
+               input[type="tel"],
+               textarea,
+               [contenteditable="true"]`,
+            factory: element =>
+                config.collapseTextEdits
+                    ? new TextBoxCollapseActions(element)
+                    : new TextBox(element),
+        },
+        {
+            selector: 'input[type="checkbox"]',
+            factory: (element) => new Checkbox(element),
+        },
+        {
+            selector: 'input[type="radio"]',
+            factory: (element) => new Radio(element),
+        },
+        {
+            selector: 'input[type="range"]',
+            factory: (element) => new Range(element),
+        },
+        {
+            selector: 'input[type="date"], input[type="time"], input[type="datetime-local"]',
+            factory: (element) => new DateTime(element),
+        },
+        {
+            selector: 'select',
+            factory: (element) => new Select(element),
+        },
+        {
+            selector: 'input[type="color"]',
+            factory: (element) => new ColorPicker(element),
+        },
+        // Future element types can be added here.
+    ];
+
     addMouseDownListeners();
     scanForUndoableElements();
     addGlobalUndoRedoShortcuts();
