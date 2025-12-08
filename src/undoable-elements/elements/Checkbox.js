@@ -1,5 +1,6 @@
 import { UndoableElement } from '../UndoableElement.js';
 import { Action } from '../Action.js';
+import {pushActionToHistory} from "../../history";
 
 /**
  * CheckboxCommand encapsulates a toggle action on a checkbox.
@@ -46,8 +47,6 @@ export class Checkbox extends UndoableElement {
 
     createAction(previousState, newState) {
         const action = new CheckboxAction(this.element, previousState, newState);
-        window.__GLOBAL_HISTORY__.push(action);
-        // Clear redo stack
-        window.__REDO_STACK__.length = 0;
+        pushActionToHistory(action);
     }
 }

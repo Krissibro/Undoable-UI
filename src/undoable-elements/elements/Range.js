@@ -1,5 +1,6 @@
 import { UndoableElement } from '../UndoableElement.js';
 import { Action } from '../Action.js';
+import {pushActionToHistory} from "../../history";
 
 /**
  * RangeAction encapsulates a change action on a range input.
@@ -69,8 +70,7 @@ export class Range extends UndoableElement {
      */
     createAction(previousValue, newValue) {
         const action = new RangeAction(this.element, this, previousValue, newValue);
-        window.__GLOBAL_HISTORY__.push(action);
-        window.__REDO_STACK__.length = 0;
+        pushActionToHistory(action);
         // Update the oldValue to the new value for subsequent changes.
         this.oldValue = newValue;
     }

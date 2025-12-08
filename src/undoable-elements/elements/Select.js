@@ -1,5 +1,6 @@
 import { UndoableElement } from '../UndoableElement.js';
 import { Action } from '../Action.js';
+import {pushActionToHistory} from "../../history";
 
 /**
  * SelectAction encapsulates a selection change on a <select> element.
@@ -67,8 +68,7 @@ export class Select extends UndoableElement {
      */
     createAction(previousValue, newValue) {
         const action = new SelectAction(this.element, this, previousValue, newValue);
-        window.__GLOBAL_HISTORY__.push(action);
-        window.__REDO_STACK__.length = 0; // Clear redo history.
+        pushActionToHistory(action);
         // Update oldValue for subsequent changes.
         this.oldValue = newValue;
     }

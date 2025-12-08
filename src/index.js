@@ -8,6 +8,7 @@ import { ColorPicker } from "./undoable-elements/elements/ColorPicker";
 import { TextBoxCollapseActions } from "./undoable-elements/elements/TextBoxCollapseActions";
 import { TextBox } from "./undoable-elements/elements/TextBox";
 import { getConfig } from "./config";
+import {ensureStacks, pushActionToHistory, pushActionToRedoStack} from "./history";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -49,7 +50,7 @@ export function undo() {
     if (window.__GLOBAL_HISTORY__.length > 0) {
         const action = window.__GLOBAL_HISTORY__.pop();
         action.undo();
-        window.__REDO_STACK__.push(action);
+        pushActionToRedoStack(action);
     }
 }
 
@@ -60,7 +61,7 @@ export function redo() {
     if (window.__REDO_STACK__.length > 0) {
         const action = window.__REDO_STACK__.pop();
         action.redo();
-        window.__GLOBAL_HISTORY__.push(action);
+        pushActionToHistory(action, { clearRedo: false });
     }
 }
 
@@ -89,6 +90,7 @@ function addMouseDownListeners() {
  * Scans the DOM for undoable elements and attaches their handlers.
  */
 export async function init() {
+    ensureStacks();
     config = await getConfig();
 
     /**

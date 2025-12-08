@@ -22,12 +22,12 @@ export function getValue(element) {
 /**
  * Set the text of an element, either value or innerText.
  * @param {HTMLElement} element
- * @param {string} val
+ * @param {string} value
  */
-export function setValue(element, val) {
+export function setValue(element, value) {
     if (isContentEditable(element)) {
-        element.innerText = val;
+        element.innerText = value;
     } else {
-        element.value = val;
+        element.value = value;
     }
 }

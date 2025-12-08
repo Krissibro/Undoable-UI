@@ -1,5 +1,6 @@
 import { UndoableElement } from '../UndoableElement.js';
 import { Action } from '../Action.js';
+import {pushActionToHistory} from "../../history";
 
 /**
  * RadioAction encapsulates a toggle action on a radio input.
@@ -91,7 +92,6 @@ export class Radio extends UndoableElement {
      */
     createAction(previousRadio) {
         const action = new RadioAction(this.element, previousRadio);
-        window.__GLOBAL_HISTORY__.push(action);
-        window.__REDO_STACK__.length = 0;
+        pushActionToHistory(action);
     }
 }

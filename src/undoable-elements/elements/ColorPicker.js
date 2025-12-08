@@ -1,5 +1,6 @@
 import { UndoableElement } from '../UndoableElement.js';
 import { Action } from '../Action.js';
+import {pushActionToHistory} from "../../history";
 
 /**
  * ColorAction encapsulates a change on a color input.
@@ -68,8 +69,7 @@ export class ColorPicker extends UndoableElement {
      */
     createAction(previousColor, newColor) {
         const action = new ColorAction(this.element, this, previousColor, newColor);
-        window.__GLOBAL_HISTORY__.push(action);
-        window.__REDO_STACK__.length = 0; // Clear redo history.
+        pushActionToHistory(action);
         this.oldColor = newColor;
     }
 }
