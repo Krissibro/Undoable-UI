@@ -8,12 +8,13 @@ import { ColorPicker } from "./undoable-elements/elements/ColorPicker";
 import { TextBoxCollapseActions } from "./undoable-elements/elements/TextBoxCollapseActions";
 import { TextBox } from "./undoable-elements/elements/TextBox";
 import { getConfig } from "./config";
-import {ensureStacks, pushActionToHistory, pushActionToRedoStack} from "./history";
+import { ensureStacks, pushActionToHistory, pushActionToRedoStack } from "./history";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
-window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
-window.__REDO_STACK__ = window.__REDO_STACK__ || [];
+// window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
+// window.__REDO_STACK__ = window.__REDO_STACK__ || [];
+ensureStacks();
 
 window.isMouseDown = false;
 
@@ -47,6 +48,11 @@ function scanForUndoableElements() {
  * Global undo function: undoes the most recent action.
  */
 export function undo() {
+    // Make sure any in-progress edits are finalized. (Before the throttle time is up)
+    if (typeof TextBox.flushAll === 'function') {
+        TextBox.flushAll();
+    }
+
     if (window.__GLOBAL_HISTORY__.length > 0) {
         const action = window.__GLOBAL_HISTORY__.pop();
         action.undo();
@@ -58,6 +64,10 @@ export function undo() {
  * Global redo function: re-executes the most recently undone action.
  */
 export function redo() {
+    if (typeof TextBox.flushAll === 'function') {
+        TextBox.flushAll();
+    }
+
     if (window.__REDO_STACK__.length > 0) {
         const action = window.__REDO_STACK__.pop();
         action.redo();
@@ -89,15 +99,15 @@ function addMouseDownListeners() {
  * Initialization function.
  * Scans the DOM for undoable elements and attaches their handlers.
  */
-export async function init() {
-    ensureStacks();
-    config = await getConfig();
+export function init() {
+
+    config = getConfig();
 
     /**
      * Factory mapping: Each entry defines a CSS selector and a factory function
      * that takes a DOM element and returns an instance of an undoable handler.
      */
-    const factoryMap = [
+    factoryMap = [
         {
             // Input types for text, search, email, url, number, tel + textarea
             // (Skipping password)
@@ -111,8 +121,8 @@ export async function init() {
                [contenteditable="true"]`,
             factory: element =>
                 config.collapseTextEdits
-                    ? new TextBoxCollapseActions(element)
-                    : new TextBox(element),
+                    ? new TextBoxCollapseActions(element, config)
+                    : new TextBox(element, config),
         },
         {
             selector: 'input[type="checkbox"]',

@@ -1,7 +1,7 @@
 export const defaultConfig = Object.freeze({
-    collapseTextEdits:  false,
     maxUndoStack:       100,
-    textChunkThrottle:  500,
+    textChunkThrottle:  300,
+    collapseTextEdits:  false,
     // TODO: future attributes
     // debug: false,
     // scopeStrategy: 'global', // or 'local'

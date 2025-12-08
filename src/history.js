@@ -1,12 +1,8 @@
 import { getConfig } from './config.js';
 
 export function ensureStacks() {
-    if (!Array.isArray(window.__GLOBAL_HISTORY__)) {
-            window.__GLOBAL_HISTORY__ = [];
-        }
-    if (!Array.isArray(window.__REDO_STACK__)) {
-            window.__REDO_STACK__ = [];
-        }
+    window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
+    window.__REDO_STACK__ = window.__REDO_STACK__ || [];
 }
 
 ensureStacks();
@@ -16,9 +12,9 @@ export function clearRedoStack() {
 }
 
 function trimHistory() {
-    const { historyLimit } = getConfig();
-    if (Number.isFinite(historyLimit) && historyLimit > 0) {
-        while (window.__GLOBAL_HISTORY__.length > historyLimit) {
+    const { maxUndoStack } = getConfig();
+    if (Number.isFinite(maxUndoStack) && maxUndoStack > 0) {
+        while (window.__GLOBAL_HISTORY__.length > maxUndoStack) {
             window.__GLOBAL_HISTORY__.shift();
         }
     }
