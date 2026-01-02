@@ -23,6 +23,14 @@ function _createClass(e, r, t) {
     writable: !1
   }), e;
 }
+function _defineProperty(e, r, t) {
+  return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+    value: t,
+    enumerable: !0,
+    configurable: !0,
+    writable: !0
+  }) : e[r] = t, e;
+}
 function _getPrototypeOf(t) {
   return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) {
     return t.__proto__ || Object.getPrototypeOf(t);
@@ -47,6 +55,27 @@ function _isNativeReflectConstruct() {
   return (_isNativeReflectConstruct = function () {
     return !!t;
   })();
+}
+function ownKeys(e, r) {
+  var t = Object.keys(e);
+  if (Object.getOwnPropertySymbols) {
+    var o = Object.getOwnPropertySymbols(e);
+    r && (o = o.filter(function (r) {
+      return Object.getOwnPropertyDescriptor(e, r).enumerable;
+    })), t.push.apply(t, o);
+  }
+  return t;
+}
+function _objectSpread2(e) {
+  for (var r = 1; r < arguments.length; r++) {
+    var t = null != arguments[r] ? arguments[r] : {};
+    r % 2 ? ownKeys(Object(t), !0).forEach(function (r) {
+      _defineProperty(e, r, t[r]);
+    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) {
+      Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
+    });
+  }
+  return e;
 }
 function _possibleConstructorReturn(t, e) {
   if (e && ("object" == typeof e || "function" == typeof e)) return e;
@@ -118,6 +147,51 @@ var Action = /*#__PURE__*/function () {
   }]);
 }();
 
+var defaultConfig = Object.freeze({
+  maxUndoStack: 100,
+  textChunkThrottle: 300,
+  collapseTextEdits: false
+  // TODO: future attributes
+  // debug: false,
+  // scopeStrategy: 'global', // or 'local'
+  // branchingHistory: false,
+});
+var currentConfig = _objectSpread2({}, defaultConfig);
+function getConfig() {
+  return currentConfig;
+}
+
+function ensureStacks() {
+  window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
+  window.__REDO_STACK__ = window.__REDO_STACK__ || [];
+}
+ensureStacks();
+function clearRedoStack() {
+  window.__REDO_STACK__.length = 0;
+}
+function trimHistory() {
+  var _getConfig = getConfig(),
+    maxUndoStack = _getConfig.maxUndoStack;
+  if (Number.isFinite(maxUndoStack) && maxUndoStack > 0) {
+    while (window.__GLOBAL_HISTORY__.length > maxUndoStack) {
+      window.__GLOBAL_HISTORY__.shift();
+    }
+  }
+}
+function pushActionToHistory(action) {
+  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+    _ref$clearRedo = _ref.clearRedo,
+    clearRedo = _ref$clearRedo === void 0 ? true : _ref$clearRedo;
+  window.__GLOBAL_HISTORY__.push(action);
+  trimHistory();
+  if (clearRedo) {
+    clearRedoStack();
+  }
+}
+function pushActionToRedoStack(action) {
+  window.__REDO_STACK__.push(action);
+}
+
 /**
  * CheckboxCommand encapsulates a toggle action on a checkbox.
  */
@@ -177,9 +251,7 @@ var Checkbox = /*#__PURE__*/function (_UndoableElement) {
     key: "createAction",
     value: function createAction(previousState, newState) {
       var action = new CheckboxAction(this.element, previousState, newState);
-      window.__GLOBAL_HISTORY__.push(action);
-      // Clear redo stack
-      window.__REDO_STACK__.length = 0;
+      pushActionToHistory(action);
     }
   }]);
 }(UndoableElement);
@@ -287,8 +359,7 @@ var Radio = /*#__PURE__*/function (_UndoableElement) {
     key: "createAction",
     value: function createAction(previousRadio) {
       var action = new RadioAction(this.element, previousRadio);
-      window.__GLOBAL_HISTORY__.push(action);
-      window.__REDO_STACK__.length = 0;
+      pushActionToHistory(action);
     }
   }]);
 }(UndoableElement);
@@ -378,8 +449,7 @@ var Range = /*#__PURE__*/function (_UndoableElement) {
     key: "createAction",
     value: function createAction(previousValue, newValue) {
       var action = new RangeAction(this.element, this, previousValue, newValue);
-      window.__GLOBAL_HISTORY__.push(action);
-      window.__REDO_STACK__.length = 0;
+      pushActionToHistory(action);
       // Update the oldValue to the new value for subsequent changes.
       this.oldValue = newValue;
     }
@@ -449,11 +519,6 @@ var DateTime = /*#__PURE__*/function (_UndoableElement) {
     key: "attachListeners",
     value: function attachListeners() {
       var _this3 = this;
-      // Use focus to capture the starting (old) value.
-      this.element.addEventListener('focus', function () {
-        _this3.oldValue = _this3.element.value;
-      });
-
       // On change, create a new DateTimeAction if the value has changed.
       var handler = function handler(event) {
         var previousValue = _this3.oldValue;
@@ -479,8 +544,7 @@ var DateTime = /*#__PURE__*/function (_UndoableElement) {
     key: "createAction",
     value: function createAction(previousValue, newValue) {
       var action = new DateTimeAction(this.element, this, previousValue, newValue);
-      window.__GLOBAL_HISTORY__.push(action);
-      window.__REDO_STACK__.length = 0; // Clear redo history.
+      pushActionToHistory(action);
       // Update oldValue to the new value.
       this.oldValue = newValue;
     }
@@ -570,8 +634,7 @@ var Select = /*#__PURE__*/function (_UndoableElement) {
     key: "createAction",
     value: function createAction(previousValue, newValue) {
       var action = new SelectAction(this.element, this, previousValue, newValue);
-      window.__GLOBAL_HISTORY__.push(action);
-      window.__REDO_STACK__.length = 0; // Clear redo history.
+      pushActionToHistory(action);
       // Update oldValue for subsequent changes.
       this.oldValue = newValue;
     }
@@ -662,8 +725,7 @@ var ColorPicker = /*#__PURE__*/function (_UndoableElement) {
     key: "createAction",
     value: function createAction(previousColor, newColor) {
       var action = new ColorAction(this.element, this, previousColor, newColor);
-      window.__GLOBAL_HISTORY__.push(action);
-      window.__REDO_STACK__.length = 0; // Clear redo history.
+      pushActionToHistory(action);
       this.oldColor = newColor;
     }
   }]);
@@ -693,13 +755,13 @@ function getValue(element) {
 /**
  * Set the text of an element, either value or innerText.
  * @param {HTMLElement} element
- * @param {string} val
+ * @param {string} value
  */
-function setValue(element, val) {
+function setValue(element, value) {
   if (isContentEditable(element)) {
-    element.innerText = val;
+    element.innerText = value;
   } else {
-    element.value = val;
+    element.value = value;
   }
 }
 
@@ -717,7 +779,7 @@ var BOUNDARY_KEY_LIST = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDo
  * TextAction represents a single edit from oldValue -> newValue
  * for a text-based element (input, textarea, or contenteditable).
  */
-var TextAction = /*#__PURE__*/function (_Action) {
+var TextAction$1 = /*#__PURE__*/function (_Action) {
   /**
    * @param {HTMLElement} element - The text-based element.
    * @param {string} oldValue - The text before the change.
@@ -823,7 +885,7 @@ var TextChunkManager = /*#__PURE__*/function () {
       // the oldValue is either the finalValue of the last chunk
       // or the initial text at focus if none.
       var oldVal = this.sessionEdits.length > 0 ? this.sessionEdits[this.sessionEdits.length - 1].newValue : this.initialText;
-      var action = new TextAction(this.element, oldVal, newValue);
+      var action = new TextAction$1(this.element, oldVal, newValue);
       window.__GLOBAL_HISTORY__.push(action);
       window.__REDO_STACK__.length = 0;
       this.sessionEdits.push(action);
@@ -886,7 +948,7 @@ var TextChunkManager = /*#__PURE__*/function () {
       }
 
       // Create one merged action
-      var mergedAction = new TextAction(this.element, this.initialText, finalValue);
+      var mergedAction = new TextAction$1(this.element, this.initialText, finalValue);
       window.__GLOBAL_HISTORY__.push(mergedAction);
       window.__REDO_STACK__.length = 0;
     }
@@ -896,22 +958,21 @@ var TextChunkManager = /*#__PURE__*/function () {
  * TextBox uses a TextChunkManager to handle partial text edits (chunks) while typing,
  * then merges them into a single action when the user blurs the field.
  */
-var TextBox = /*#__PURE__*/function (_UndoableElement) {
-  function TextBox(element) {
+var TextBoxCollapse = /*#__PURE__*/function (_UndoableElement) {
+  function TextBoxCollapse(element) {
     var _this2;
-    _classCallCheck(this, TextBox);
-    _this2 = _callSuper(this, TextBox, [element]);
+    _classCallCheck(this, TextBoxCollapse);
+    _this2 = _callSuper(this, TextBoxCollapse, [element]);
+    _this2.initialFocusValue = null;
+    _this2.chunkManager = null;
     _this2.attachListeners();
     return _this2;
   }
-  _inherits(TextBox, _UndoableElement);
-  return _createClass(TextBox, [{
+  _inherits(TextBoxCollapse, _UndoableElement);
+  return _createClass(TextBoxCollapse, [{
     key: "attachListeners",
     value: function attachListeners() {
       var _this3 = this;
-      this.initialFocusValue = null;
-      this.chunkManager = null;
-
       // On focus, start a new chunking session
       this.element.addEventListener('focus', function () {
         _this3.initialFocusValue = getValue(_this3.element);
@@ -947,58 +1008,212 @@ var TextBox = /*#__PURE__*/function (_UndoableElement) {
   }]);
 }(UndoableElement);
 
+var BOUNDARY_KEYS = new Set(["Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"]);
+
+/**
+ * TextAction encapsulates a text change on an input/textarea/contenteditable.
+ * It records the previous text and the new text.
+ */
+var TextAction = /*#__PURE__*/function (_Action) {
+  /**
+   * @param {HTMLElement} element
+   * @param {TextBox} textBoxListener
+   * @param {string} previousText
+   * @param {string} newText
+   */
+  function TextAction(element, textBoxListener, previousText, newText) {
+    var _this;
+    _classCallCheck(this, TextAction);
+    _this = _callSuper(this, TextAction, [element]);
+    _this.textBoxListener = textBoxListener;
+    _this.previousText = previousText;
+    _this.newText = newText;
+    return _this;
+  }
+  _inherits(TextAction, _Action);
+  return _createClass(TextAction, [{
+    key: "redo",
+    value: function redo() {
+      this.textBoxListener.oldValue = this.newText;
+      setValue(this.element, this.newText);
+    }
+  }, {
+    key: "undo",
+    value: function undo() {
+      this.textBoxListener.oldValue = this.previousText;
+      setValue(this.element, this.previousText);
+    }
+  }]);
+}(Action);
+
+/**
+ * TextBox wraps text-like elements and groups rapid edits into "chunks".
+ *
+ * It uses config.textChunkThrottle (ms) to decide how long to wait after
+ * the last keystroke before committing an action.
+ */
+var TextBox = /*#__PURE__*/function (_UndoableElement) {
+  /**
+   * @param {HTMLElement} element
+   * @param {Object} config
+   */
+  function TextBox(element) {
+    var _this2;
+    var config = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    _classCallCheck(this, TextBox);
+    _this2 = _callSuper(this, TextBox, [element]);
+    _this2.config = config;
+    _this2.throttleMs = typeof config.textChunkThrottle === "number" ? config.textChunkThrottle : 0;
+
+    // Last committed value (what undo/redo considers the "current" value)
+    _this2.oldValue = getValue(_this2.element);
+
+    // Chunking state
+    _this2.chunkActive = false;
+    _this2.chunkStartValue = _this2.oldValue;
+    _this2.chunkTimerId = null;
+
+    // Track instances so we can flush pending chunks globally if needed
+    TextBox._instances.add(_this2);
+    _this2.attachListeners();
+    return _this2;
+  }
+
+  /**
+   * Attach listeners for input/change/blur.
+   * We record every change via input, but only push an action when:
+   *  - the throttle timer fires, or
+   *  - the element blurs / change event fires.
+   */
+  _inherits(TextBox, _UndoableElement);
+  return _createClass(TextBox, [{
+    key: "attachListeners",
+    value: function attachListeners() {
+      var _this3 = this;
+      var handleInput = function handleInput() {
+        _this3.handleInputEvent();
+      };
+      var finalizeChunk = function finalizeChunk() {
+        _this3.commitChunk();
+      };
+      this.element.addEventListener("input", handleInput);
+      this.element.addEventListener("keydown", function (event) {
+        if (BOUNDARY_KEYS.has(event.key)) {
+          _this3.commitChunk();
+        }
+      });
+      // On blur or change, force a commit of any pending chunk.
+      this.element.addEventListener("blur", finalizeChunk);
+      this.element.addEventListener("change", finalizeChunk);
+    }
+
+    /**
+     * Called on every input event.
+     * Starts or continues a chunk and (re)schedules the commit timer.
+     */
+  }, {
+    key: "handleInputEvent",
+    value: function handleInputEvent() {
+      var _this4 = this;
+      var currentValue = getValue(this.element);
+
+      // No actual change compared to last committed value; ignore.
+      if (!this.chunkActive && currentValue === this.oldValue) {
+        return;
+      }
+
+      // First change in this chunk: remember where we started.
+      if (!this.chunkActive) {
+        this.chunkActive = true;
+        this.chunkStartValue = this.oldValue;
+      }
+
+      // If throttle is 0 or negative, commit immediately for each input.
+      if (!this.throttleMs || this.throttleMs <= 0) {
+        this.commitChunk();
+        return;
+      }
+
+      // Otherwise, debounce commits: reset the timer on each keystroke.
+      if (this.chunkTimerId !== null) {
+        clearTimeout(this.chunkTimerId);
+      }
+      // Set new timer to commit chunk
+      this.chunkTimerId = setTimeout(function () {
+        _this4.commitChunk();
+      }, this.throttleMs);
+    }
+
+    /**
+     * Commit the current chunk (if any) as a TextAction in history.
+     */
+  }, {
+    key: "commitChunk",
+    value: function commitChunk() {
+      if (this.chunkTimerId !== null) {
+        clearTimeout(this.chunkTimerId);
+        this.chunkTimerId = null;
+      }
+      var finalValue = getValue(this.element);
+
+      // If we never actually started a chunk but value drifted (programmatic change),
+      // fall back to a simple previous → current action.
+      if (!this.chunkActive) {
+        if (finalValue !== this.oldValue) {
+          var action = new TextAction(this.element, this, this.oldValue, finalValue);
+          pushActionToHistory(action);
+          this.oldValue = finalValue;
+        }
+        return;
+      }
+
+      // Chunk was active; only commit if something actually changed from the start.
+      if (finalValue !== this.chunkStartValue) {
+        var _action = new TextAction(this.element, this, this.chunkStartValue, finalValue);
+        pushActionToHistory(_action);
+        this.oldValue = finalValue;
+      }
+      this.chunkActive = false;
+    }
+
+    /**
+     * Optional cleanup if you ever detach this element manually.
+     */
+  }, {
+    key: "dispose",
+    value: function dispose() {
+      TextBox._instances["delete"](this);
+      // If you want to be thorough, also remove event listeners (not stored here yet).
+    }
+
+    /**
+     * Flush any pending chunks for *all* TextBox instances.
+     * Useful to call before global undo/redo.
+     * For example if the user triggers undo while still within an editing session. (Before the throttle timer fires.)
+     */
+  }], [{
+    key: "flushAll",
+    value: function flushAll() {
+      TextBox._instances.forEach(function (instance) {
+        instance.commitChunk();
+      });
+    }
+  }]);
+}(UndoableElement);
+
+// Static collection of all active instances
+TextBox._instances = new Set();
+
 // src/index.js
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
-window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
-window.__REDO_STACK__ = window.__REDO_STACK__ || [];
+// window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
+// window.__REDO_STACK__ = window.__REDO_STACK__ || [];
+ensureStacks();
 window.isMouseDown = false;
-
-/**
- * Factory mapping: Each entry defines a CSS selector and a factory function
- * that takes a DOM element and returns an instance of an undoable handler.
- */
-var factoryMap = [{
-  // Input types for text, search, email, url, number, tel + textarea
-  // (Skipping password)
-  selector: "input[type=\"text\"],\n               input[type=\"search\"],\n               input[type=\"email\"],\n               input[type=\"url\"],\n               input[type=\"number\"],\n               input[type=\"tel\"],\n               textarea,\n               [contenteditable=\"true\"]",
-  factory: function factory(element) {
-    return new TextBox(element);
-  }
-}, {
-  selector: 'input[type="checkbox"]',
-  factory: function factory(element) {
-    return new Checkbox(element);
-  }
-}, {
-  selector: 'input[type="radio"]',
-  factory: function factory(element) {
-    return new Radio(element);
-  }
-}, {
-  selector: 'input[type="range"]',
-  factory: function factory(element) {
-    return new Range(element);
-  }
-}, {
-  selector: 'input[type="date"], input[type="time"], input[type="datetime-local"]',
-  factory: function factory(element) {
-    return new DateTime(element);
-  }
-}, {
-  selector: 'select',
-  factory: function factory(element) {
-    return new Select(element);
-  }
-}, {
-  selector: 'input[type="color"]',
-  factory: function factory(element) {
-    return new ColorPicker(element);
-  }
-}
-// Future element types can be added here.
-];
+var config;
+var factoryMap;
 
 // TODO: Could be more efficient by only scanning the DOM once.
 // If possible
@@ -1027,10 +1242,14 @@ function scanForUndoableElements() {
  * Global undo function: undoes the most recent action.
  */
 function undo() {
+  // Make sure any in-progress edits are finalized. (Before the throttle time is up)
+  if (typeof TextBox.flushAll === 'function') {
+    TextBox.flushAll();
+  }
   if (window.__GLOBAL_HISTORY__.length > 0) {
     var action = window.__GLOBAL_HISTORY__.pop();
     action.undo();
-    window.__REDO_STACK__.push(action);
+    pushActionToRedoStack(action);
   }
 }
 
@@ -1038,10 +1257,15 @@ function undo() {
  * Global redo function: re-executes the most recently undone action.
  */
 function redo() {
+  if (typeof TextBox.flushAll === 'function') {
+    TextBox.flushAll();
+  }
   if (window.__REDO_STACK__.length > 0) {
     var action = window.__REDO_STACK__.pop();
     action.redo();
-    window.__GLOBAL_HISTORY__.push(action);
+    pushActionToHistory(action, {
+      clearRedo: false
+    });
   }
 }
 function addGlobalUndoRedoShortcuts() {
@@ -1072,6 +1296,52 @@ function addMouseDownListeners() {
  * Scans the DOM for undoable elements and attaches their handlers.
  */
 function init() {
+  config = getConfig();
+
+  /**
+   * Factory mapping: Each entry defines a CSS selector and a factory function
+   * that takes a DOM element and returns an instance of an undoable handler.
+   */
+  factoryMap = [{
+    // Input types for text, search, email, url, number, tel + textarea
+    // (Skipping password)
+    selector: "input[type=\"text\"],\n               input[type=\"search\"],\n               input[type=\"email\"],\n               input[type=\"url\"],\n               input[type=\"number\"],\n               input[type=\"tel\"],\n               textarea,\n               [contenteditable=\"true\"]",
+    factory: function factory(element) {
+      return config.collapseTextEdits ? new TextBoxCollapse(element, config) : new TextBox(element, config);
+    }
+  }, {
+    selector: 'input[type="checkbox"]',
+    factory: function factory(element) {
+      return new Checkbox(element);
+    }
+  }, {
+    selector: 'input[type="radio"]',
+    factory: function factory(element) {
+      return new Radio(element);
+    }
+  }, {
+    selector: 'input[type="range"]',
+    factory: function factory(element) {
+      return new Range(element);
+    }
+  }, {
+    selector: 'input[type="date"], input[type="time"], input[type="datetime-local"]',
+    factory: function factory(element) {
+      return new DateTime(element);
+    }
+  }, {
+    selector: 'select',
+    factory: function factory(element) {
+      return new Select(element);
+    }
+  }, {
+    selector: 'input[type="color"]',
+    factory: function factory(element) {
+      return new ColorPicker(element);
+    }
+  }
+  // Future element types can be added here.
+  ];
   addMouseDownListeners();
   scanForUndoableElements();
   addGlobalUndoRedoShortcuts();

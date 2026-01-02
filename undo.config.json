@@ -1,0 +1,5 @@
+{
+  "collapseTextEdits": true,
+  "maxUndoStack": 100,
+  "textChunkThrottle": 500
+}
