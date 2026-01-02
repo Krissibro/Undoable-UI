@@ -5,7 +5,7 @@ import { Range } from './undoable-elements/elements/Range.js';
 import { DateTime } from "./undoable-elements/elements/DateTime";
 import { Select } from "./undoable-elements/elements/Select";
 import { ColorPicker } from "./undoable-elements/elements/ColorPicker";
-import { TextBoxCollapseActions } from "./undoable-elements/elements/TextBoxCollapseActions";
+import { TextBoxCollapse } from "./undoable-elements/elements/TextBoxCollapse";
 import { TextBox } from "./undoable-elements/elements/TextBox";
 import { getConfig } from "./config";
 import { ensureStacks, pushActionToHistory, pushActionToRedoStack } from "./history";
@@ -121,7 +121,7 @@ export function init() {
                [contenteditable="true"]`,
             factory: element =>
                 config.collapseTextEdits
-                    ? new TextBoxCollapseActions(element, config)
+                    ? new TextBoxCollapse(element, config)
                     : new TextBox(element, config),
         },
         {

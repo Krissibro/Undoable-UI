@@ -5,6 +5,18 @@ import { Action } from '../Action.js';
 import { pushActionToHistory } from '../../history.js';
 import { getValue, setValue } from './TextElementHelpers.js';
 
+const BOUNDARY_KEYS = new Set([
+    "Enter",
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Home",
+    "End",
+    "PageUp",
+    "PageDown"
+]);
+
 /**
  * TextAction encapsulates a text change on an input/textarea/contenteditable.
  * It records the previous text and the new text.
@@ -50,7 +62,7 @@ export class TextBox extends UndoableElement {
 
         this.config = config;
         this.throttleMs =
-            typeof config.textChunkThrottle === 'number'
+            typeof config.textChunkThrottle === "number"
                 ? config.textChunkThrottle
                 : 0;
 
@@ -83,10 +95,15 @@ export class TextBox extends UndoableElement {
             this.commitChunk();
         };
 
-        this.element.addEventListener('input', handleInput);
+        this.element.addEventListener("input", handleInput);
+        this.element.addEventListener("keydown", (event) => {
+            if (BOUNDARY_KEYS.has(event.key)) {
+                this.commitChunk()
+            }
+        });
         // On blur or change, force a commit of any pending chunk.
-        this.element.addEventListener('blur', finalizeChunk);
-        this.element.addEventListener('change', finalizeChunk);
+        this.element.addEventListener("blur", finalizeChunk);
+        this.element.addEventListener("change", finalizeChunk);
     }
 
     /**
@@ -117,11 +134,13 @@ export class TextBox extends UndoableElement {
         if (this.chunkTimerId !== null) {
             clearTimeout(this.chunkTimerId);
         }
-
-        this.chunkTimerId = setTimeout(() => {
-            this.commitChunk();
-        }, this.throttleMs);
+        // Set new timer to commit chunk
+        this.chunkTimerId = setTimeout(() =>
+            { this.commitChunk();},
+            this.throttleMs
+        );
     }
+
 
     /**
      * Commit the current chunk (if any) as a TextAction in history.

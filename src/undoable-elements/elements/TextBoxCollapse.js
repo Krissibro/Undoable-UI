@@ -185,7 +185,7 @@ class TextChunkManager {
  * TextBox uses a TextChunkManager to handle partial text edits (chunks) while typing,
  * then merges them into a single action when the user blurs the field.
  */
-export class TextBoxCollapseActions extends UndoableElement {
+export class TextBoxCollapse extends UndoableElement {
     constructor(element) {
         super(element);
         this.initialFocusValue = null;
