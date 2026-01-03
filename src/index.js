@@ -31,7 +31,7 @@ let factoryMap;
  * Scan the DOM for undoable elements.
  * For each mapping in factoryMap, select all matching elements and create a wrapper.
  */
-function scanForAndWrapUndoableElements(root = document) {
+function scanForAndWrapUndoableElements(root) {
     factoryMap.forEach(({ selector, factory }) => {
         const elements = root.querySelectorAll(selector);
         elements.forEach((element) => {
@@ -44,19 +44,37 @@ function scanForAndWrapUndoableElements(root = document) {
     });
 }
 
-// TODO: Not tested
-// Also gotta make sure its not missing any children elements
+/**
+ * Sets up a MutationObserver to watch for added nodes in the DOM.
+ * When new nodes are added, it scans them for undoable elements and wraps them.
+ * @returns {MutationObserver}
+ */
 function setupMutationObserver() {
-    const observer = new MutationObserver(
-        mutations => {
-            for ( const mutation of mutations ) {
-                for ( const node of mutation.addedNodes ) {
-                    if ( !node instanceof HTMLElement ) return;
-                    scanForAndWrapUndoableElements(node)
-                }
+    const observer = new MutationObserver((mutations) => {
+        for ( const mutation of mutations ) {
+            for ( const node of mutation.addedNodes ) {
+                // skip text nodes, comments, etc.
+                if ( !(node instanceof HTMLElement) ) continue;
+
+                // Check if the added node itself matches any factory selectors
+                factoryMap.forEach( ({ selector, factory }) => {
+                    if ( node.matches(selector) && !node.__undoable__ ) {
+                        node.__undoable__ = factory(node);
+                    }
+                });
+
+                // Also scan the subtree of the added node
+                scanForAndWrapUndoableElements(node)
             }
         }
-    )
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
+
+    return observer;
 }
 
 // Make sure any in-progress edits are finalized. (Before the throttle time is up for example)
@@ -171,7 +189,7 @@ export function init() {
     ];
 
     addMouseDownListeners();
-    scanForAndWrapUndoableElements();
+    scanForAndWrapUndoableElements(document);
     setupMutationObserver();
     addGlobalUndoRedoShortcuts();
 }
