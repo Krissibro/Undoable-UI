@@ -1,3 +1,5 @@
+import {registerInstance, unregisterInstance} from "./elementRegistry";
+
 /**
  * Base class for undoable elements.
  * Subclasses should implement:
@@ -7,6 +9,7 @@
 export class UndoableElement {
     constructor(element) {
         this.element = element;
+        registerInstance(this)
     }
 
     attachListeners() {
@@ -15,5 +18,15 @@ export class UndoableElement {
 
     createAction(event) {
         throw new Error("createCommand() must be implemented by subclasses.");
+    }
+
+    dispose() {
+        this.disposeListeners();
+        this.element.__undoable__ = undefined;
+        unregisterInstance(this);
+    }
+
+    disposeListeners() {
+        throw new Error("disposeListeners() must be implemented by subclasses.");
     }
 }
