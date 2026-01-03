@@ -24,7 +24,7 @@ let factoryMap;
 
 
 // TODO: Could be more efficient by only scanning the DOM once.
-// If possible
+// If possible, maybe use the factory to pattern match the node type
 // TODO: Instead of attaching listeners to all elements, could use event delegation maybe.
 /**
  * Scan the DOM for undoable elements.
@@ -168,6 +168,7 @@ export function init() {
 
     addMouseDownListeners();
     scanForUndoableElements();
+    setupMutationObserver();
     addGlobalUndoRedoShortcuts();
 }
 
