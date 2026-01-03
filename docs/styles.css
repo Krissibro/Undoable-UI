@@ -1,0 +1,89 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    margin: 0;
+    background: #f4f4f4;
+    text-align: center;
+}
+.container {
+    max-width: 1500px;
+    margin: 0 auto;
+    text-align: left;
+}
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.controls {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.controls button {
+    font-size: 16px;
+    padding: 8px 16px;
+    margin: 0 10px;
+}
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+.group {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.group h2 {
+    text-align: center;
+    margin-top: 0;
+    font-size: 18px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+}
+.group label {
+    display: block;
+    margin: 6px 0;
+}
+.group input[type="range"],
+.group input[type="date"],
+.group input[type="time"],
+.group input[type="datetime-local"],
+.group select,
+.group input[type="color"] {
+    width: 100%;
+    margin: 5px 0;
+}
+
+/* Make the text-based inputs group span two columns in the main grid */
+.group.text-based {
+    grid-column: span 2;
+}
+/* Sub-grid for splitting text-based inputs into two columns */
+.text-subgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* Nested grid for the first column to split labels/inputs into two columns */
+.nested-grid {
+    display: grid;
+    grid-template-columns: 0.3fr 0.7fr;
+    gap: 10px;
+}
+
+.editable-box {
+    border: 1px solid #ccc;
+    min-height: 70px;
+    padding: 5px;
+}
+
+/* Make textarea visually similar to the contenteditable box */
+#textarea1 {
+    /* Adjust for padding and border thickness - 12px */
+    width: calc(100% - 12px);
+    resize: vertical; /* let user resize if desired */
+}
