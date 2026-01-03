@@ -30,19 +30,34 @@ let factoryMap;
  * Scan the DOM for undoable elements.
  * For each mapping in factoryMap, select all matching elements and create a handler.
  */
-function scanForUndoableElements() {
+function scanForUndoableElements(root = document) {
     factoryMap.forEach(({ selector, factory }) => {
-        const elements = document.querySelectorAll(selector);
+        const elements = root.querySelectorAll(selector);
         elements.forEach((element) => {
             // Optionally, check if element is already wrapped.
             if (!element.__undoable__) {
+                // If the element exist in the factory, wrap it.
                 element.__undoable__ = factory(element);
             }
         });
     });
 }
 
-// TODO: Add mutation observer to automatically attach listeners to new elements.
+// TODO: Not tested
+// Also gotta make sure its not missing any children elements
+function setupMutationObserver() {
+    const observer = new MutationObserver(
+        mutations => {
+            for ( const mutation of mutations ) {
+                for ( const node of mutation.addedNodes ) {
+                    if ( !node instanceof HTMLElement ) return;
+                    scanForUndoableElements(node)
+                }
+            }
+        }
+    )
+}
+
 
 /**
  * Global undo function: undoes the most recent action.
