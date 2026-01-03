@@ -15,9 +15,12 @@
         <button onclick="UndoableUI.redo()">Redo</button>
         <p>You can also use Ctrl + Z and Ctrl + Y to undo/redo.</p>
         <p>The shortcuts only work when not in a built-in modal (popup), as native browser behaviour takes precedence when in one.</p>
+        <div id="add-squares-to-grid-controller"></div>
     </div>
 
-    <div class="grid-container">
+
+
+    <div class="grid-container" id="grid">
 
         <!-- Text-Based Inputs (Spanning Two Columns) -->
         <div class="group text-based">
@@ -120,5 +123,6 @@
 
     </div>
 </div>
+<script type="module" src="demo.js"></script>
 </body>
 </html>
