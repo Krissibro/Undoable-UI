@@ -3,7 +3,7 @@
 import { UndoableElement } from '../UndoableElement.js';
 import { Action } from '../Action.js';
 import { pushActionToHistory } from '../../history.js';
-import { getValue, setValue } from './TextElementHelpers.js';
+import { getValue, setValue } from './textElementHelpers.js';
 
 const BOUNDARY_KEYS = new Set([
     "Enter",

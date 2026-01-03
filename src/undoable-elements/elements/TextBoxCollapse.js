@@ -1,6 +1,6 @@
 import { Action } from '../Action.js';
 import { UndoableElement } from "../UndoableElement";
-import { isContentEditable, getValue, setValue } from "./TextElementHelpers";
+import { isContentEditable, getValue, setValue } from "./textElementHelpers";
 
 
 /**
