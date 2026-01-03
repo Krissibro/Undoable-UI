@@ -9,6 +9,7 @@ import { TextBoxCollapse } from "./undoable-elements/elements/TextBoxCollapse";
 import { TextBox } from "./undoable-elements/elements/TextBox";
 import { getConfig } from "./config";
 import { ensureStacks, pushActionToHistory, pushActionToRedoStack } from "./history";
+import { disposeAllUndoables } from "./undoable-elements/elementRegistry";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -28,9 +29,9 @@ let factoryMap;
 // TODO: Instead of attaching listeners to all elements, could use event delegation maybe.
 /**
  * Scan the DOM for undoable elements.
- * For each mapping in factoryMap, select all matching elements and create a handler.
+ * For each mapping in factoryMap, select all matching elements and create a wrapper.
  */
-function scanForUndoableElements(root = document) {
+function scanForAndWrapUndoableElements(root = document) {
     factoryMap.forEach(({ selector, factory }) => {
         const elements = root.querySelectorAll(selector);
         elements.forEach((element) => {
@@ -51,11 +52,18 @@ function setupMutationObserver() {
             for ( const mutation of mutations ) {
                 for ( const node of mutation.addedNodes ) {
                     if ( !node instanceof HTMLElement ) return;
-                    scanForUndoableElements(node)
+                    scanForAndWrapUndoableElements(node)
                 }
             }
         }
     )
+}
+
+// Make sure any in-progress edits are finalized. (Before the throttle time is up for example)
+function flushActiveUndoables() {
+    if (typeof TextBox.flushAll === 'function') {
+        TextBox.flushAll();
+    }
 }
 
 
@@ -63,10 +71,7 @@ function setupMutationObserver() {
  * Global undo function: undoes the most recent action.
  */
 export function undo() {
-    // Make sure any in-progress edits are finalized. (Before the throttle time is up)
-    if (typeof TextBox.flushAll === 'function') {
-        TextBox.flushAll();
-    }
+    flushActiveUndoables()
 
     if (window.__GLOBAL_HISTORY__.length > 0) {
         const action = window.__GLOBAL_HISTORY__.pop();
@@ -79,9 +84,7 @@ export function undo() {
  * Global redo function: re-executes the most recently undone action.
  */
 export function redo() {
-    if (typeof TextBox.flushAll === 'function') {
-        TextBox.flushAll();
-    }
+    flushActiveUndoables()
 
     if (window.__REDO_STACK__.length > 0) {
         const action = window.__REDO_STACK__.pop();
@@ -105,6 +108,7 @@ function addGlobalUndoRedoShortcuts() {
     });
 }
 
+// TODO: needed?
 function addMouseDownListeners() {
     document.addEventListener('mousedown', () => window.isMouseDown = true);
     document.addEventListener('mouseup',   () => window.isMouseDown = false);
@@ -167,7 +171,7 @@ export function init() {
     ];
 
     addMouseDownListeners();
-    scanForUndoableElements();
+    scanForAndWrapUndoableElements();
     setupMutationObserver();
     addGlobalUndoRedoShortcuts();
 }

@@ -53,6 +53,8 @@ export class TextAction extends Action {
  * the last keystroke before committing an action.
  */
 export class TextBox extends UndoableElement {
+    static _instances = new Set();
+
     /**
      * @param {HTMLElement} element
      * @param {Object} config
@@ -81,6 +83,7 @@ export class TextBox extends UndoableElement {
 
         this._listenerCleanups = [];
         this.attachListeners();
+        TextBox._instances.add(this)
     }
 
     /**
@@ -110,7 +113,7 @@ export class TextBox extends UndoableElement {
             return;
         }
 
-        // Chunk was active; only commit if something actually changed from the start.
+        // Chunk was active, only commit if something actually changed from the start.
         if (finalValue !== this.chunkStartValue) {
             const action = new TextAction(
                 this.element,
@@ -175,6 +178,7 @@ export class TextBox extends UndoableElement {
     attachListeners() {
         this._addEventListener("input", this.handleInputEvent);
         this._addEventListener("keydown", this.handleBoundaryKeyEvent);
+        this._addEventListener("pointerdown", this.commitChunk)
         // On blur or change, force a commit of any pending chunk.
         this._addEventListener("blur", this.commitChunk);
         this._addEventListener("change", this.commitChunk);
@@ -194,5 +198,12 @@ export class TextBox extends UndoableElement {
 
         this._listenerCleanups.forEach((fn) => fn())
         this._listenerCleanups = []
+        TextBox._instances.delete(this);
+    }
+
+    static flushAll() {
+        for ( const textbox of TextBox._instances ) {
+            textbox.commitChunk();
+        }
     }
 }
