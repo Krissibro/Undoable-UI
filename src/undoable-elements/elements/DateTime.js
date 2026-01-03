@@ -8,14 +8,14 @@ import {pushActionToHistory} from "../../history";
  */
 export class DateTimeAction extends Action {
     /**
-     * @param {HTMLInputElement} element - The date/time input element.
-     * @param {DateTime} dateTimeListener - The DateTime instance.
+     * @param {HTMLInputElement} dateTimeElement - The date/time input element.
+     * @param {DateTime} dateTimeWrapper - The DateTime instance.
      * @param {string} previousValue - The value before the change.
      * @param {string} newValue - The value after the change.
      */
-    constructor(element, dateTimeListener, previousValue, newValue) {
-        super(element);
-        this.dateTimeListener = dateTimeListener;
+    constructor(dateTimeElement, dateTimeWrapper, previousValue, newValue) {
+        super(dateTimeElement);
+        this.dateTimeListener = dateTimeWrapper;
         this.previousValue = previousValue;
         this.newValue = newValue;
     }
@@ -46,23 +46,10 @@ export class DateTime extends UndoableElement {
         super(element);
         // Record the initial value when the element is created.
         this.oldValue = element.value;
+
+        // Stable reference to be used to handle changes in the listeners
+        this.handleChanges = this.handleChanges.bind(this)
         this.attachListeners();
-    }
-
-    attachListeners() {
-        // On change, create a new DateTimeAction if the value has changed.
-        const handler = (event) => {
-            const previousValue = this.oldValue;
-            const newValue = this.element.value;
-            if (previousValue !== newValue) {
-                this.createAction(previousValue, newValue);
-            }
-        };
-
-        // Attach the same handler to both 'input' and 'change'
-        ['input', 'change'].forEach(type => {
-            this.element.addEventListener(type, handler);
-        });
     }
 
     /**
@@ -76,5 +63,28 @@ export class DateTime extends UndoableElement {
         pushActionToHistory(action);
         // Update oldValue to the new value.
         this.oldValue = newValue;
+    }
+
+    handleChanges() {
+        // On change, create a new DateTimeAction if the value has changed.
+        const previousValue = this.oldValue;
+        const newValue = this.element.value;
+        if (previousValue !== newValue) {
+            this.createAction(previousValue, newValue);
+        }
+    }
+
+    attachListeners() {
+        // Attach the same handler to both 'input' and 'change'
+        ['input', 'change'].forEach(type => {
+            this.element.addEventListener(type, this.handleChanges);
+        });
+    }
+
+    disposeListeners() {
+        // Attach the same handler to both 'input' and 'change'
+        ['input', 'change'].forEach(type => {
+            this.element.removeEventListener(type, this.handleChanges);
+        });
     }
 }

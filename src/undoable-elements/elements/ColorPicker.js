@@ -9,13 +9,13 @@ import {pushActionToHistory} from "../../history";
 export class ColorAction extends Action {
     /**
      * @param {HTMLInputElement} colorElement - The color input element.
-     * @param {ColorPicker} colorPickerListener - The color picker listener instance.
+     * @param {ColorPicker} colorPickerWrapper - The color picker listener instance.
      * @param {string} previousColor - The color before the change.
      * @param {string} newColor - The color after the change.
      */
-    constructor(colorElement, colorPickerListener, previousColor, newColor) {
+    constructor(colorElement, colorPickerWrapper, previousColor, newColor) {
         super(colorElement);
-        this.colorPickerListener = colorPickerListener;
+        this.colorPickerListener = colorPickerWrapper;
         this.previousColor = previousColor;
         this.newColor = newColor;
     }
@@ -46,18 +46,10 @@ export class ColorPicker extends UndoableElement {
         super(element);
         // Record the initial color value.
         this.oldColor = element.value;
-        this.attachListeners();
-    }
 
-    attachListeners() {
-        // Define a single handler for both 'input' and 'change' events.
-        this.element.addEventListener('change', () => {
-            const previousColor = this.oldColor;
-            const newColor = this.element.value;
-            if (previousColor !== newColor) {
-                this.createAction(previousColor, newColor);
-            }
-        });
+        // Stable reference to be used to handle changes in the listeners
+        this.handleChanges = this.handleChanges.bind(this);
+        this.attachListeners();
     }
 
     /**
@@ -71,5 +63,22 @@ export class ColorPicker extends UndoableElement {
         const action = new ColorAction(this.element, this, previousColor, newColor);
         pushActionToHistory(action);
         this.oldColor = newColor;
+    }
+
+    handleChanges() {
+        const previousColor = this.oldColor;
+        const newColor = this.element.value;
+        if (previousColor !== newColor) {
+            this.createAction(previousColor, newColor);
+        }
+    }
+
+    attachListeners() {
+        // Define a single handler for both 'input' and 'change' events.
+        this.element.addEventListener('change', this.handleChanges)
+    }
+
+    disposeListeners() {
+        this.element.removeEventListener('change', this.handleChanges)
     }
 }

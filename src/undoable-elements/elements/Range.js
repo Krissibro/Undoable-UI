@@ -46,19 +46,9 @@ export class Range extends UndoableElement {
         super(element);
         // Initialize a property to store the previous value.
         this.oldValue = element.value;
+        // Stable reference to be used to handle changes in the listeners
+        this.handleChanges = this.handleChanges.bind(this)
         this.attachListeners();
-    }
-
-    attachListeners() {
-        // On change, create a RangeAction.
-        this.element.addEventListener('change', (event) => {
-            const previousValue = this.oldValue;
-            const newValue = this.element.value;
-            // Only record an action if the value has actually changed.
-            if (previousValue !== newValue) {
-                this.createAction(previousValue, newValue);
-            }
-        });
     }
 
     /**
@@ -73,5 +63,23 @@ export class Range extends UndoableElement {
         pushActionToHistory(action);
         // Update the oldValue to the new value for subsequent changes.
         this.oldValue = newValue;
+    }
+
+    handleChanges() {
+        // On change, create a RangeAction.
+        const previousValue = this.oldValue;
+        const newValue = this.element.value;
+        // Only record an action if the value has actually changed.
+        if (previousValue !== newValue) {
+            this.createAction(previousValue, newValue);
+        }
+    }
+
+    attachListeners() {
+        this.element.addEventListener("change", this.handleChanges);
+    }
+
+    disposeListeners() {
+        this.element.removeEventListener("change", this.handleChanges)
     }
 }

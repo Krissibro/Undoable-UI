@@ -8,12 +8,12 @@ import {pushActionToHistory} from "../../history";
  */
 export class RadioAction extends Action {
     /**
-     * @param {HTMLInputElement} radio - The radio element that was clicked (new selection).
+     * @param {HTMLInputElement} radioElement - The radio element that was clicked (new selection).
      * @param {HTMLInputElement|null} previousRadio - The previously selected radio in the group (or null if none).
      */
-    constructor(radio, previousRadio) {
-        super(radio);
-        this.newRadio = radio;
+    constructor(radioElement, previousRadio) {
+        super(radioElement);
+        this.newRadio = radioElement;
         this.previousRadio = previousRadio; // may be null if there was no previous selection
     }
 
@@ -69,20 +69,10 @@ export class Radio extends UndoableElement {
             });
         }
         // TODO: What happens if the radio button does not have a group name?
+
+        // Stable reference to be used to handle changes in the listeners
+        this.handleChanges = this.handleChanges.bind(this)
         this.attachListeners();
-    }
-
-    attachListeners() {
-        // On change, create a RadioAction.
-        this.element.addEventListener('change', () => {
-            const groupName = this.element.name;
-            if (!groupName) return;
-            const previousRadio = Radio.previousSelections[groupName] || null;
-            // Update stored previous selection to the current element.
-            Radio.previousSelections[groupName] = this.element;
-
-            this.createAction(previousRadio);
-        });
     }
 
     /**
@@ -94,4 +84,25 @@ export class Radio extends UndoableElement {
         const action = new RadioAction(this.element, previousRadio);
         pushActionToHistory(action);
     }
+
+    handleChanges() {
+        const groupName = this.element.name;
+        if (!groupName) return;
+        const previousRadio = Radio.previousSelections[groupName] || null;
+        // Update stored previous selection to the current element.
+        Radio.previousSelections[groupName] = this.element;
+
+        this.createAction(previousRadio);
+    }
+
+    attachListeners() {
+        // On change, create a RadioAction.
+        this.element.addEventListener("change", this.handleChanges);
+    }
+
+    disposeListeners() {
+        this.element.removeEventListener("change", this.handleChanges)
+    }
+
+
 }

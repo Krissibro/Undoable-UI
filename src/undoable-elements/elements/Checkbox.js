@@ -7,12 +7,12 @@ import {pushActionToHistory} from "../../history";
  */
 export class CheckboxAction extends Action {
     /**
-     * @param {HTMLInputElement} checkbox - The checkbox element.
+     * @param {HTMLInputElement} checkboxElement - The checkbox element.
      * @param {boolean} previousState - The state before the change.
      * @param {boolean} newState - The state after the change.
      */
-    constructor(checkbox, previousState, newState) {
-        super(checkbox)
+    constructor(checkboxElement, previousState, newState) {
+        super(checkboxElement)
         this.previousState = previousState;
         this.newState = newState;
     }
@@ -33,20 +33,28 @@ export class CheckboxAction extends Action {
 export class Checkbox extends UndoableElement {
     constructor(element) {
         super(element);
+        // Stable reference to be used to handle changes in the listeners
+        this.handleChange = this.handleChange.bind(this)
         this.attachListeners();
-    }
-
-    attachListeners() {
-        this.element.addEventListener('change', (event) => {
-            // For toggling, assume the previous state is the opposite of the current.
-            const newState = this.element.checked;
-            const previousState = !newState;
-            this.createAction(previousState, newState);
-        });
     }
 
     createAction(previousState, newState) {
         const action = new CheckboxAction(this.element, previousState, newState);
         pushActionToHistory(action);
+    }
+
+    handleChange () {
+        // For toggling, assume the previous state is the opposite of the current.
+        const newState = this.element.checked;
+        const previousState = !newState;
+        this.createAction(previousState, newState);
+    }
+
+    attachListeners() {
+        this.element.addEventListener('change', this.handleChange);
+    }
+
+    disposeListeners() {
+        this.element.removeEventListener("change", this.handleChange)
     }
 }
