@@ -10,6 +10,7 @@ import { TextBox } from "./undoable-elements/elements/TextBox";
 import { getConfig } from "./config";
 import { ensureStacks, pushActionToHistory, pushActionToRedoStack } from "./history";
 import { disposeAllUndoables } from "./undoable-elements/elementRegistry";
+import { createFactoryMap } from "./undoable-elements/elementFactoryMap";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -139,54 +140,7 @@ function addMouseDownListeners() {
 export function init() {
 
     config = getConfig();
-
-    /**
-     * Factory mapping: Each entry defines a CSS selector and a factory function
-     * that takes a DOM element and returns an instance of an undoable handler.
-     */
-    factoryMap = [
-        {
-            // Input types for text, search, email, url, number, tel + textarea
-            // (Skipping password)
-            selector: `input[type="text"],
-               input[type="search"],
-               input[type="email"],
-               input[type="url"],
-               input[type="number"],
-               input[type="tel"],
-               textarea,
-               [contenteditable="true"]`,
-            factory: element =>
-                config.collapseTextEdits
-                    ? new TextBoxCollapse(element, config)
-                    : new TextBox(element, config),
-        },
-        {
-            selector: 'input[type="checkbox"]',
-            factory: (element) => new Checkbox(element),
-        },
-        {
-            selector: 'input[type="radio"]',
-            factory: (element) => new Radio(element),
-        },
-        {
-            selector: 'input[type="range"]',
-            factory: (element) => new Range(element),
-        },
-        {
-            selector: 'input[type="date"], input[type="time"], input[type="datetime-local"]',
-            factory: (element) => new DateTime(element),
-        },
-        {
-            selector: 'select',
-            factory: (element) => new Select(element),
-        },
-        {
-            selector: 'input[type="color"]',
-            factory: (element) => new ColorPicker(element),
-        },
-        // Future element types can be added here.
-    ];
+    factoryMap = createFactoryMap(config);
 
     addMouseDownListeners();
     scanForAndWrapUndoableElements(document);
