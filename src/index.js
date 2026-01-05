@@ -77,11 +77,50 @@ function addMouseDownListeners() {
 }
 
 /**
+ * Updates config and optionally reinitializes wrappers.
+ * @param {object} partialConfig
+ * @param {{ reinitialize?: boolean }} [options]
+ * @returns {object} updated config
+ */
+export function updateConfigAndReinitialize(partialConfig = {}, options = {}) {
+    const { reinitialize = true } = options;
+
+    config = updateConfig(partialConfig);
+
+    if (reinitialize) {
+        factoryMap = createFactoryMap(config);
+        reinitializeUndoWrappers(factoryMap);
+    }
+
+    return config;
+}
+
+/**
+ * Resets config and optionally reinitializes wrappers.
+ * @param {{ reinitialize?: boolean }} [options]
+ * @returns {object} reset config
+ */
+export function resetConfigAndReinitialize(options = {}) {
+    const { reinitialize = true } = options;
+
+    config = resetConfigToDefaults();
+
+    if (reinitialize) {
+        factoryMap = createFactoryMap(config);
+        reinitializeUndoWrappers(factoryMap);
+    }
+
+    return config;
+}
+
+
+/**
  * Initialization function.
  * Scans the DOM for undoable elements and attaches their handlers.
+ * Sets up mutation observers to handle dynamically added elements.
+ * Also sets up global keyboard shortcuts for undo/redo.
  */
 export function init() {
-
     config = getConfig();
     factoryMap = createFactoryMap(config);
 
@@ -100,5 +139,10 @@ if (typeof window !== 'undefined') {
     }
 
     // Expose the API globally (UMD style)
-    window.UndoableUI = { undo, redo };
+    window.UndoableUI = {
+        undo,
+        redo,
+        updateConfig: updateConfigAndReinitialize,
+        resetConfigToDefaults: resetConfigAndReinitialize,
+    };
 }
