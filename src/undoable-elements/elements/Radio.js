@@ -17,6 +17,11 @@ export class RadioAction extends Action {
         this.previousRadio = previousRadio; // may be null if there was no previous selection
     }
 
+    affectedElements() {
+        // Filter to avoid returning null values
+        return [this.element, this.previousRadio].filter(Boolean)
+    }
+
     /**
      * Executes the action by checking the new radio and unchecking the previous one (if present).
      */

@@ -1,11 +1,10 @@
 import { getConfig } from './config.js';
+import {isHistoryReplaying} from "./historyReplayProtection";
 
-export function ensureStacks() {
+export function ensureHistoryStacks() {
     window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
     window.__REDO_STACK__ = window.__REDO_STACK__ || [];
 }
-
-ensureStacks();
 
 export function clearRedoStack() {
     window.__REDO_STACK__.length = 0;
@@ -21,6 +20,7 @@ function trimHistory() {
 }
 
 export function pushActionToHistory(action, { clearRedo = true } = {}) {
+    if (isHistoryReplaying()) return;
     window.__GLOBAL_HISTORY__.push(action);
     trimHistory();
     if (clearRedo) {

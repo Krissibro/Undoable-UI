@@ -6,6 +6,10 @@ export class Action {
         this.element = element;
     }
 
+    affectedElements() {
+        return [this.element];
+    }
+
     redo() {
         throw new Error("redo() must be implemented by subclasses.");
     }

@@ -1,17 +1,11 @@
 // src/index.js
 import { TextBox } from "./undoable-elements/elements/TextBox";
-import { getConfig } from "./config";
-import { ensureStacks, pushActionToHistory, pushActionToRedoStack } from "./history";
-import { disposeAllUndoables } from "./undoable-elements/elementRegistry";
-import { buildCandidateElementSelectors, createFactoryMap } from "./undoable-elements/elementFactoryMap";
-
-// Global history arrays
-// for simplicity, we attach these to the window so they are accessible by our modules
-// window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
-// window.__REDO_STACK__ = window.__REDO_STACK__ || [];
-ensureStacks();
-
-window.isMouseDown = false;
+import { getConfig, resetConfigToDefaults, updateConfig } from "./config";
+import { ensureHistoryStacks, pushActionToHistory, pushActionToRedoStack } from "./history";
+import { createFactoryMap } from "./undoable-elements/elementFactoryMap";
+import { activateHistoryReplayProtection } from "./historyReplayProtection";
+import { dispatchEvents } from "./dispatchEventHandler";
+import { initializeUndoableWrappers, reinitializeUndoWrappers } from "./undoableWrapperHandler";
 
 let config;
 let factoryMap;
@@ -100,7 +94,12 @@ export function undo() {
 
     if (window.__GLOBAL_HISTORY__.length > 0) {
         const action = window.__GLOBAL_HISTORY__.pop();
-        action.undo();
+
+        activateHistoryReplayProtection(() => {
+            action.undo();
+            dispatchEvents(action, config)
+        });
+
         pushActionToRedoStack(action);
     }
 }
@@ -113,7 +112,12 @@ export function redo() {
 
     if (window.__REDO_STACK__.length > 0) {
         const action = window.__REDO_STACK__.pop();
-        action.redo();
+
+        activateHistoryReplayProtection(() => {
+            action.redo();
+            dispatchEvents(action, config)
+        });
+
         pushActionToHistory(action, { clearRedo: false });
     }
 }
