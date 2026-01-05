@@ -122,6 +122,13 @@ export function redo() {
     }
 }
 
+// Make sure any in-progress edits are finalized. (Before the throttle time is up for example)
+function flushActiveUndoables() {
+    if (typeof TextBox.flushAll === 'function') {
+        TextBox.flushAll();
+    }
+}
+
 function addGlobalUndoRedoShortcuts() {
     document.addEventListener('keydown', function (event) {
         // Check for Ctrl+Z or Cmd+Z (for Mac)
@@ -152,9 +159,7 @@ export function init() {
     config = getConfig();
     factoryMap = createFactoryMap(config);
 
-    addMouseDownListeners();
-    scanForAndWrapUndoableElements(document);
-    setupMutationObserver();
+    ensureHistoryStacks();
     initializeUndoableWrappers(factoryMap);
     addGlobalUndoRedoShortcuts();
 }
