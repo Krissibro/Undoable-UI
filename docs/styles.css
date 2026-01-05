@@ -1,52 +1,167 @@
+/* --- Base --- */
+:root {
+    --bg: #f4f4f4;
+    --card: #ffffff;
+    --border: #dddddd;
+    --text: #111;
+    --muted: rgba(0, 0, 0, 0.65);
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
 body {
     font-family: Arial, sans-serif;
-    padding: 20px;
     margin: 0;
-    background: #f4f4f4;
-    text-align: center;
+    background: var(--bg);
+    color: var(--text);
 }
+
 .container {
     max-width: 1500px;
     margin: 0 auto;
-    text-align: left;
+    padding: 20px;
 }
-h1 {
-    text-align: center;
-    margin-bottom: 20px;
+
+/* --- Top header --- */
+.topbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
 }
-.controls {
-    text-align: center;
-    margin-bottom: 30px;
+
+.topbar h1 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.1;
 }
-.controls button {
-    font-size: 16px;
-    padding: 8px 16px;
-    margin: 0 10px;
+
+.subtitle {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 14px;
 }
+
+.kbd-hints {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.kbd {
+    display: inline-block;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 8px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    color: #000;
+}
+
+.sep { opacity: 0.5; }
+
+/* --- Page layout --- */
+.layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 18px;
+    align-items: start;
+}
+
+.sidebar {
+    position: sticky;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.content {
+    min-width: 0; /* prevent overflow issues with grids */
+}
+
+.section-title {
+    margin: 0 0 12px 0;
+    font-size: 20px;
+}
+
+/* --- Panels --- */
+.panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px;
+}
+
+.panel-title {
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.hint {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+/* --- Buttons --- */
+.btn-row {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: #fafafa;
+    padding: 9px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn:hover {
+    background: #f0f0f0;
+}
+
+/* --- Existing grid cards (your “group” blocks) --- */
 .grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    gap: 16px;
 }
+
 .group {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 15px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow);
 }
+
 .group h2 {
     text-align: center;
     margin-top: 0;
     font-size: 18px;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
     margin-bottom: 10px;
 }
+
 .group label {
     display: block;
     margin: 6px 0;
 }
+
 .group input[type="range"],
 .group input[type="date"],
 .group input[type="time"],
@@ -57,18 +172,17 @@ h1 {
     margin: 5px 0;
 }
 
-/* Make the text-based inputs group span two columns in the main grid */
+/* text-based group layout you already had */
 .group.text-based {
     grid-column: span 2;
 }
-/* Sub-grid for splitting text-based inputs into two columns */
+
 .text-subgrid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
 
-/* Nested grid for the first column to split labels/inputs into two columns */
 .nested-grid {
     display: grid;
     grid-template-columns: 0.3fr 0.7fr;
@@ -81,9 +195,149 @@ h1 {
     padding: 5px;
 }
 
-/* Make textarea visually similar to the contenteditable box */
 #textarea1 {
-    /* Adjust for padding and border thickness - 12px */
     width: calc(100% - 12px);
-    resize: vertical; /* let user resize if desired */
+    resize: vertical;
+}
+
+/* --- Config panel (new) --- */
+.cfg {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cfg-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.cfg-title {
+    font-weight: 700;
+    font-size: 16px;
+    margin: 0;
+}
+
+.cfg-subtitle {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+.cfg-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.cfg-span-2 {
+    grid-column: span 2;
+}
+
+.cfg-label {
+    display: block;
+    font-size: 12px;
+    opacity: 0.75;
+    margin-bottom: 4px;
+}
+
+.cfg-field input,
+.cfg-field select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #d7d7d7;
+    border-radius: 8px;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.cfg-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.cfg-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.cfg-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #cfcfcf;
+    border-radius: 10px;
+    background: #f6f6f6;
+    cursor: pointer;
+}
+
+.cfg-btn:hover {
+    background: #efefef;
+}
+
+.cfg-btn-primary {
+    background: #ffffff;
+    border-color: #bdbdbd;
+    font-weight: 600;
+}
+
+.cfg-status {
+    font-size: 12px;
+    opacity: 0.75;
+    min-height: 16px;
+}
+
+.cfg-details {
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    background: #fafafa;
+    padding: 8px 10px;
+}
+
+.cfg-summary {
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0.8;
+    user-select: none;
+}
+
+.cfg-output {
+    margin: 8px 0 0 0;
+    max-height: 180px;
+    overflow: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+
+/* Make add-controls not look like a floating island */
+.add-controls {
+    margin: 0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.add-controls select,
+.add-controls button {
+    padding: 8px 10px;
+    font-size: 14px;
+}
+
+/* --- Responsive: stack sidebar on small screens --- */
+@media (max-width: 980px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+    .sidebar {
+        position: static;
+    }
+    .group.text-based {
+        grid-column: span 1;
+    }
 }

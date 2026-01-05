@@ -1,15 +1,8 @@
-// demo.js
 import { templates } from "./templates.js";
+import { htmlToElement, qs } from "./domUtils.js";
 
-function htmlToElement(html) {
-    const wrapper = document.createElement("div");
-    wrapper.innerHTML = html.trim();
-    return wrapper.firstElementChild;
-}
-
-function injectControls() {
-    const host = document.getElementById("add-squares-to-grid-controller");
-    host.innerHTML = `
+function injectControls(hostEl) {
+    hostEl.innerHTML = `
     <div class="add-controls">
       <select id="templateSelect">
         ${Object.keys(templates).map(k => `<option value="${k}">${k}</option>`).join("")}
@@ -27,7 +20,6 @@ function uniquifyRadioNames(groupEl) {
 }
 
 function getInterestingInputs(groupEl) {
-    // Grab elements your library wraps (same types as your selector)
     return groupEl.querySelectorAll(`
     input[type="text"],
     input[type="search"],
@@ -51,43 +43,40 @@ function getInterestingInputs(groupEl) {
 function logWrappedStatus(groupEl) {
     const inputs = getInterestingInputs(groupEl);
 
-    // MutationObserver callbacks happen async; queue a microtask-ish check
+    // MutationObserver runs async; let it breathe for a tick.
     setTimeout(() => {
         const statuses = [...inputs].map(el => ({
             tag: el.tagName.toLowerCase(),
             type: el.getAttribute("type") || (el.isContentEditable ? "contenteditable" : ""),
-            wrapped: Boolean(el.__undoable__)
+            wrapped: Boolean(el.__undoable__),
         }));
 
         const allWrapped = statuses.every(s => s.wrapped);
-
-        console.log(allWrapped ? "✅ New group wrapped by MutationObserver" : "❌ Some elements not wrapped", statuses);
+        console.log(
+            allWrapped ? "✅ New group wrapped by MutationObserver" : "❌ Some elements not wrapped",
+            statuses
+        );
     }, 0);
 }
 
-function addSelectedTemplateToGrid() {
-    const grid = document.getElementById("grid");
-    const key = document.getElementById("templateSelect").value;
+function addSelectedTemplateToGrid(gridEl) {
+    const key = qs("templateSelect").value;
 
     const groupEl = htmlToElement(templates[key]);
     uniquifyRadioNames(groupEl);
+    gridEl.appendChild(groupEl);
 
-    grid.appendChild(groupEl);
-
-    // The whole point: do NOT call UndoableUI.init() here.
-    // We want to see if MutationObserver wraps it automatically.
+    // Do NOT call UndoableUI.init() here — we’re testing the observer.
     logWrappedStatus(groupEl);
 
     groupEl.scrollIntoView({ behavior: "smooth", block: "end" });
 }
 
-function main() {
-    injectControls();
-    document.getElementById("addToGridBtn").addEventListener("click", addSelectedTemplateToGrid);
-}
+export function mountAddSquaresController({ hostId, gridId }) {
+    const host = qs(hostId);
+    const grid = qs(gridId);
 
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", main);
-} else {
-    main();
+    injectControls(host);
+
+    qs("addToGridBtn").addEventListener("click", () => addSelectedTemplateToGrid(grid));
 }
