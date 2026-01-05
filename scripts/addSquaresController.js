@@ -4,7 +4,6 @@ import { htmlToElement, qs } from "./domUtils.js";
 function injectControls(hostEl) {
     hostEl.innerHTML = `
     <div class="cfg-subtitle">For testing if the MutationObserver catches and adds undoable wrappers to new elements.</div>
-<!--    <p class="hint"> For testing if the MutationObserver catches and adds undoable wrappers to new elements.</p>-->
     <br>
     <div class="add-controls">
         
