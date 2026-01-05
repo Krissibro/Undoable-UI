@@ -1,214 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>UndoableUI Demo</title>
+
+    <!-- Your built UMD bundle exposes window.UndoableUI -->
     <script src="dist/undoable-ui.umd.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            margin: 0;
-            background: #f4f4f4;
-            text-align: center;
-        }
-        .container {
-            max-width: 1500px;
-            margin: 0 auto;
-            text-align: left;
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .controls {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .controls button {
-            font-size: 16px;
-            padding: 8px 16px;
-            margin: 0 10px;
-        }
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        .group {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .group h2 {
-            text-align: center;
-            margin-top: 0;
-            font-size: 18px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-        }
-        .group label {
-            display: block;
-            margin: 6px 0;
-        }
-        .group input[type="range"],
-        .group input[type="date"],
-        .group input[type="time"],
-        .group input[type="datetime-local"],
-        .group select,
-        .group input[type="color"] {
-            width: 100%;
-            margin: 5px 0;
-        }
 
-        /* Make the text-based inputs group span two columns in the main grid */
-        .group.text-based {
-            grid-column: span 2;
-        }
-        /* Sub-grid for splitting text-based inputs into two columns */
-        .text-subgrid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        /* Nested grid for the first column to split labels/inputs into two columns */
-        .nested-grid {
-            display: grid;
-            grid-template-columns: 0.3fr 0.7fr;
-            gap: 10px;
-        }
-
-        .editable-box {
-            border: 1px solid #ccc;
-            min-height: 70px;
-            padding: 5px;
-        }
-
-        /* Make textarea visually similar to the contenteditable box */
-        #textarea1 {
-            /* Adjust for padding and border thickness - 12px */
-            width: calc(100% - 12px);
-            resize: vertical; /* let user resize if desired */
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 <div class="container">
-    <h1>UndoableUI Demo</h1>
+    <header class="topbar">
+        <div>
+            <h1>UndoableUI Demo</h1>
+            <p class="subtitle">Test inputs + live config tweaks for Undo/Redo behavior.</p>
+        </div>
 
-    <div class="controls">
-        <button onclick="UndoableUI.undo()">Undo</button>
-        <button onclick="UndoableUI.redo()">Redo</button>
-        <p>You can also use Ctrl + Z and Ctrl + Y to undo/redo.</p>
-        <p>The shortcuts only work when not in a modal, as native browser behaviour takes precedence when in one.</p>
-    </div>
+        <div class="kbd-hints">
+            <span class="kbd">Ctrl</span> + <span class="kbd">Z</span> undo
+            <span class="sep">•</span>
+            <span class="kbd">Ctrl</span> + <span class="kbd">Y</span> redo
+        </div>
+    </header>
 
-    <div class="grid-container">
+    <main class="layout">
+        <aside class="sidebar">
+            <section class="panel">
+                <div class="panel-title">Actions</div>
 
-        <!-- Text-Based Inputs (Spanning Two Columns) -->
-        <div class="group text-based">
-            <h2>Text-Based Inputs</h2>
-            <div class="text-subgrid">
-                <!-- Column 1: Basic text inputs, further split into two columns -->
-                <div class="nested-grid">
-                    <label for="textbox1">Text:</label>
-                    <input type="text" id="textbox1" name="textbox1" placeholder="Type something here...">
-                    <label for="textbox2">Search:</label>
-                    <input type="search" id="textbox2" name="textbox2" placeholder="Search...">
-                    <label for="textbox3">Email:</label>
-                    <input type="email" id="textbox3" name="textbox3" placeholder="example@example.com">
-                    <label for="textbox4">URL:</label>
-                    <input type="url" id="textbox4" name="textbox4" placeholder="https://example.com">
-                    <label for="textbox5">Number:</label>
-                    <input type="number" id="textbox5" name="textbox5" placeholder="Enter a number">
-                    <label for="textbox6">Tel:</label>
-                    <input type="tel" id="textbox6" name="textbox6" placeholder="Phone number">
+                <div class="btn-row">
+                    <button class="btn" onclick="UndoableUI.undo()">Undo</button>
+                    <button class="btn" onclick="UndoableUI.redo()">Redo</button>
                 </div>
-                <!-- Column 2: Textarea, Content Editable -->
-                <div>
-                    <label>Textarea:
-                        <br>
-                        <textarea class="editable-box" id="textarea1" rows="3" placeholder="Multi-line text"></textarea>
-                    </label>
-                    <label>Content Editable:
-                        <div id="contentEditable1" class="editable-box" contenteditable="true">
-                            Type some text here...
+
+                <p class="hint">
+                    Shortcuts won’t override native undo inside certain built-in browser modals.
+                </p>
+            </section>
+
+            <!-- Add-to-grid mounts here -->
+            <section class="panel">
+                <div class="panel-title">Add test group</div>
+                <div id="add-squares-to-grid-controller"></div>
+            </section>
+
+            <!-- Config panel mounts here -->
+            <section class="panel">
+                <div id="config-controller"></div>
+            </section>
+
+
+        </aside>
+
+        <section class="content">
+
+            <div class="grid-container" id="grid">
+                <!-- Text-Based Inputs (Spanning Two Columns) -->
+                <div class="group text-based">
+                    <h2>Text-Based Inputs</h2>
+                    <div class="text-subgrid">
+                        <!-- Column 1: Basic text inputs, further split into two columns -->
+                        <div class="nested-grid">
+                            <label for="textbox1">Text:</label>
+                            <input type="text" id="textbox1" name="textbox1" placeholder="Type something here...">
+
+                            <label for="textbox2">Search:</label>
+                            <input type="search" id="textbox2" name="textbox2" placeholder="Search...">
+
+                            <label for="textbox3">Email:</label>
+                            <input type="email" id="textbox3" name="textbox3" placeholder="example@example.com">
+
+                            <label for="textbox4">URL:</label>
+                            <input type="url" id="textbox4" name="textbox4" placeholder="https://example.com">
+
+                            <label for="textbox5">Number:</label>
+                            <input type="number" id="textbox5" name="textbox5" placeholder="Enter a number">
+
+                            <label for="textbox6">Tel:</label>
+                            <input type="tel" id="textbox6" name="textbox6" placeholder="Phone number">
                         </div>
-                    </label>
+
+                        <!-- Column 2: Textarea, Content Editable -->
+                        <div>
+                            <label>Textarea:
+                                <br>
+                                <textarea class="editable-box" id="textarea1" rows="3" placeholder="Multi-line text"></textarea>
+                            </label>
+
+                            <label>Content Editable:
+                                <div id="contentEditable1" class="editable-box" contenteditable="true">
+                                    Type some text here...
+                                </div>
+                            </label>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Radio Inputs (Group "group1") -->
+                <div class="group">
+                    <h2>Radio Inputs (Group "group1")</h2>
+                    <label><input type="radio" name="group1" id="radio1" /> Radio 1</label>
+                    <label><input type="radio" name="group1" id="radio2" /> Radio 2</label>
+                    <label><input type="radio" name="group1" id="radio3" /> Radio 3</label>
+                    <label><input type="radio" name="group1" id="radio4" /> Radio 4</label>
+                </div>
+
+                <!-- Radio Inputs (Group "group2") -->
+                <div class="group">
+                    <h2>Radio Inputs (Group "group2")</h2>
+                    <label><input type="radio" name="group2" id="radio5" /> Radio 1</label>
+                    <label><input type="radio" name="group2" id="radio6" /> Radio 2</label>
+                    <label><input type="radio" name="group2" id="radio7" /> Radio 3</label>
+                    <label><input type="radio" name="group2" id="radio8" /> Radio 4</label>
+                </div>
+
+                <!-- Checkboxes -->
+                <div class="group">
+                    <h2>Checkboxes</h2>
+                    <label><input type="checkbox" id="checkbox1" /> Option 1</label>
+                    <label><input type="checkbox" id="checkbox2" /> Option 2</label>
+                    <label><input type="checkbox" id="checkbox3" /> Option 3</label>
+                    <label><input type="checkbox" id="checkbox4" /> Option 4</label>
+                </div>
+
+                <!-- Range Input -->
+                <div class="group">
+                    <h2>Range Input</h2>
+                    <label for="range1">Volume (for example):</label>
+                    <input type="range" id="range1" min="0" max="100" value="50">
+                </div>
+
+                <!-- Date/Time Inputs -->
+                <div class="group">
+                    <h2>Date/Time Inputs</h2>
+                    <label for="date1">Date:</label>
+                    <input type="date" id="date1" value="2023-01-01">
+
+                    <label for="time1">Time:</label>
+                    <input type="time" id="time1" value="12:00">
+
+                    <label for="datetime1">Datetime:</label>
+                    <input type="datetime-local" id="datetime1" value="2023-01-01T12:00">
+                </div>
+
+                <!-- Select Input -->
+                <div class="group">
+                    <h2>Select Input</h2>
+                    <label for="select1">Choose an option:</label>
+                    <select id="select1">
+                        <option value="option1">Option 1</option>
+                        <option value="option2">Option 2</option>
+                        <option value="option3">Option 3</option>
+                        <option value="option4">Option 4</option>
+                    </select>
+                </div>
+
+                <!-- Color Picker -->
+                <div class="group">
+                    <h2>Color Picker</h2>
+                    <label for="color1">Pick a color:</label>
+                    <input type="color" id="color1" value="#ff0000">
+
+                    <div id="color1Value" style="margin-top: 6px; font-family: monospace;">
+                        #ff0000
+                    </div>
+                </div>
+
             </div>
-        </div>
-
-
-        <!-- Radio Inputs (Group "group1") -->
-        <div class="group">
-            <h2>Radio Inputs (Group "group1")</h2>
-            <label><input type="radio" name="group1" id="radio1" /> Radio 1</label>
-            <label><input type="radio" name="group1" id="radio2" /> Radio 2</label>
-            <label><input type="radio" name="group1" id="radio3" /> Radio 3</label>
-            <label><input type="radio" name="group1" id="radio4" /> Radio 4</label>
-        </div>
-
-        <!-- Radio Inputs (Group "group2") -->
-        <div class="group">
-            <h2>Radio Inputs (Group "group2")</h2>
-            <label><input type="radio" name="group2" id="radio5" /> Radio 1</label>
-            <label><input type="radio" name="group2" id="radio6" /> Radio 2</label>
-            <label><input type="radio" name="group2" id="radio7" /> Radio 3</label>
-            <label><input type="radio" name="group2" id="radio8" /> Radio 4</label>
-        </div>
-
-        <!-- Checkboxes -->
-        <div class="group">
-            <h2>Checkboxes</h2>
-            <label><input type="checkbox" id="checkbox1" /> Option 1</label>
-            <label><input type="checkbox" id="checkbox2" /> Option 2</label>
-            <label><input type="checkbox" id="checkbox3" /> Option 3</label>
-            <label><input type="checkbox" id="checkbox4" /> Option 4</label>
-        </div>
-
-        <!-- Range Input -->
-        <div class="group">
-            <h2>Range Input</h2>
-            <label for="range1">Volume:</label>
-            <input type="range" id="range1" min="0" max="100" value="50">
-        </div>
-
-        <!-- Date/Time Inputs -->
-        <div class="group">
-            <h2>Date/Time Inputs</h2>
-            <label for="date1">Date:</label>
-            <input type="date" id="date1" value="2023-01-01">
-            <label for="time1">Time:</label>
-            <input type="time" id="time1" value="12:00">
-            <label for="datetime1">Datetime:</label>
-            <input type="datetime-local" id="datetime1" value="2023-01-01T12:00">
-        </div>
-
-        <!-- Select Input -->
-        <div class="group">
-            <h2>Select Input</h2>
-            <label for="select1">Choose an option:</label>
-            <select id="select1">
-                <option value="option1">Option 1</option>
-                <option value="option2">Option 2</option>
-                <option value="option3">Option 3</option>
-                <option value="option4">Option 4</option>
-            </select>
-        </div>
-
-        <!-- Color Picker -->
-        <div class="group">
-            <h2>Color Picker</h2>
-            <label for="color1">Pick a color:</label>
-            <input type="color" id="color1" value="#ff0000">
-        </div>
-
-    </div>
+        </section>
+    </main>
 </div>
+
+<script type="module" src="scripts/demo.js"></script>
 </body>
 </html>

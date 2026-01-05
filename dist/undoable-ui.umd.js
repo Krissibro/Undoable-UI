@@ -4,6 +4,14 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.UndoableUI = {}));
 })(this, (function (exports) { 'use strict';
 
+  function _arrayLikeToArray(r, a) {
+    (null == a || a > r.length) && (a = r.length);
+    for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
+    return n;
+  }
+  function _arrayWithoutHoles(r) {
+    if (Array.isArray(r)) return _arrayLikeToArray(r);
+  }
   function _assertThisInitialized(e) {
     if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
     return e;
@@ -24,6 +32,54 @@
     return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
       writable: !1
     }), e;
+  }
+  function _createForOfIteratorHelper(r, e) {
+    var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+    if (!t) {
+      if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) {
+        t && (r = t);
+        var n = 0,
+          F = function () {};
+        return {
+          s: F,
+          n: function () {
+            return n >= r.length ? {
+              done: !0
+            } : {
+              done: !1,
+              value: r[n++]
+            };
+          },
+          e: function (r) {
+            throw r;
+          },
+          f: F
+        };
+      }
+      throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+    }
+    var o,
+      a = !0,
+      u = !1;
+    return {
+      s: function () {
+        t = t.call(r);
+      },
+      n: function () {
+        var r = t.next();
+        return a = r.done, r;
+      },
+      e: function (r) {
+        u = !0, o = r;
+      },
+      f: function () {
+        try {
+          a || null == t.return || t.return();
+        } finally {
+          if (u) throw o;
+        }
+      }
+    };
   }
   function _defineProperty(e, r, t) {
     return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
@@ -58,6 +114,12 @@
       return !!t;
     })();
   }
+  function _iterableToArray(r) {
+    if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
+  }
+  function _nonIterableSpread() {
+    throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
   function ownKeys(e, r) {
     var t = Object.keys(e);
     if (Object.getOwnPropertySymbols) {
@@ -89,6 +151,9 @@
       return t.__proto__ = e, t;
     }, _setPrototypeOf(t, e);
   }
+  function _toConsumableArray(r) {
+    return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread();
+  }
   function _toPrimitive(t, r) {
     if ("object" != typeof t || !t) return t;
     var e = t[Symbol.toPrimitive];
@@ -103,6 +168,29 @@
     var i = _toPrimitive(t, "string");
     return "symbol" == typeof i ? i : i + "";
   }
+  function _unsupportedIterableToArray(r, a) {
+    if (r) {
+      if ("string" == typeof r) return _arrayLikeToArray(r, a);
+      var t = {}.toString.call(r).slice(8, -1);
+      return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
+    }
+  }
+
+  var instances = new Set();
+  function registerInstance(instance) {
+    instances.add(instance);
+  }
+  function unregisterInstance(instance) {
+    instances["delete"](instance);
+  }
+  function disposeAllUndoables() {
+    instances.forEach(function (instance) {
+      if (typeof instance.dispose === "function") {
+        instance.dispose();
+      }
+    });
+    instances.clear();
+  }
 
   /**
    * Base class for undoable elements.
@@ -114,6 +202,7 @@
     function UndoableElement(element) {
       _classCallCheck(this, UndoableElement);
       this.element = element;
+      registerInstance(this);
     }
     return _createClass(UndoableElement, [{
       key: "attachListeners",
@@ -124,6 +213,18 @@
       key: "createAction",
       value: function createAction(event) {
         throw new Error("createCommand() must be implemented by subclasses.");
+      }
+    }, {
+      key: "dispose",
+      value: function dispose() {
+        this.disposeListeners();
+        this.element.__undoable__ = undefined;
+        unregisterInstance(this);
+      }
+    }, {
+      key: "disposeListeners",
+      value: function disposeListeners() {
+        throw new Error("disposeListeners() must be implemented by subclasses.");
       }
     }]);
   }();
@@ -137,6 +238,11 @@
       this.element = element;
     }
     return _createClass(Action, [{
+      key: "affectedElements",
+      value: function affectedElements() {
+        return [this.element];
+      }
+    }, {
       key: "redo",
       value: function redo() {
         throw new Error("redo() must be implemented by subclasses.");
@@ -152,7 +258,10 @@
   var defaultConfig = Object.freeze({
     maxUndoStack: 100,
     textChunkThrottle: 300,
-    collapseTextEdits: false
+    collapseTextEdits: false,
+    // Dispatch native events after undo/redo so app UI updates.
+    // "none" | "input" | "change" | "both"
+    undoRedoEventDispatchStrategy: "both"
     // TODO: future attributes
     // debug: false,
     // scopeStrategy: 'global', // or 'local'
@@ -163,11 +272,42 @@
     return currentConfig;
   }
 
-  function ensureStacks() {
+  /**
+   * Merges the provided partialConfig with the existing configuration.
+   * Any properties not specified in partialConfig will retain their current values.
+   * @param {Object} partialConfig - An object containing configuration properties to update.
+   */
+  function updateConfig() {
+    var partialConfig = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    currentConfig = _objectSpread2(_objectSpread2({}, currentConfig), partialConfig);
+    return currentConfig;
+  }
+
+  /** Resets the current configuration to the default settings.
+   */
+  function resetConfigToDefaults() {
+    currentConfig = _objectSpread2({}, defaultConfig);
+    return currentConfig;
+  }
+
+  // Counter instead of boolean to support nested calls in the future
+  var historyReplayDepth = 0;
+  function activateHistoryReplayProtection(fn) {
+    historyReplayDepth++;
+    try {
+      return fn();
+    } finally {
+      historyReplayDepth--;
+    }
+  }
+  function isHistoryReplaying() {
+    return historyReplayDepth > 0;
+  }
+
+  function ensureHistoryStacks() {
     window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
     window.__REDO_STACK__ = window.__REDO_STACK__ || [];
   }
-  ensureStacks();
   function clearRedoStack() {
     window.__REDO_STACK__.length = 0;
   }
@@ -184,6 +324,7 @@
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
       _ref$clearRedo = _ref.clearRedo,
       clearRedo = _ref$clearRedo === void 0 ? true : _ref$clearRedo;
+    if (isHistoryReplaying()) return;
     window.__GLOBAL_HISTORY__.push(action);
     trimHistory();
     if (clearRedo) {
@@ -195,18 +336,263 @@
   }
 
   /**
+   * Check if the element is contenteditable.
+   * @param {HTMLElement} element
+   * @returns {boolean}
+   */
+  function isContentEditable(element) {
+    return element.isContentEditable || element.getAttribute('contenteditable') === 'true';
+  }
+
+  /**
+   * Retrieve the current text from an element, either value or innerText.
+   * @param {HTMLElement} element
+   * @returns {string}
+   */
+  function getValue(element) {
+    if (isContentEditable(element)) {
+      return element.innerText;
+    }
+    return element.value;
+  }
+
+  /**
+   * Set the text of an element, either value or innerText.
+   * @param {HTMLElement} element
+   * @param {string} value
+   */
+  function setValue(element, value) {
+    if (isContentEditable(element)) {
+      element.innerText = value;
+    } else {
+      element.value = value;
+    }
+  }
+
+  var BOUNDARY_KEYS = new Set(["Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"]);
+
+  /**
+   * TextAction encapsulates a text change on an input/textarea/contenteditable.
+   * It records the previous text and the new text.
+   */
+  var TextAction$1 = /*#__PURE__*/function (_Action) {
+    /**
+     * @param {HTMLElement} textElement
+     * @param {TextBox} textBoxWrapper
+     * @param {string} previousValue
+     * @param {string} newValue
+     */
+    function TextAction(textElement, textBoxWrapper, previousValue, newValue) {
+      var _this;
+      _classCallCheck(this, TextAction);
+      _this = _callSuper(this, TextAction, [textElement]);
+      _this.textBoxWrapper = textBoxWrapper;
+      _this.previousValue = previousValue;
+      _this.newValue = newValue;
+      return _this;
+    }
+    _inherits(TextAction, _Action);
+    return _createClass(TextAction, [{
+      key: "redo",
+      value: function redo() {
+        this.textBoxWrapper.previousValue = this.newValue;
+        setValue(this.element, this.newValue);
+      }
+    }, {
+      key: "undo",
+      value: function undo() {
+        this.textBoxWrapper.previousValue = this.previousValue;
+        setValue(this.element, this.previousValue);
+      }
+    }]);
+  }(Action);
+
+  /**
+   * TextBox wraps text-like elements and groups rapid edits into "chunks".
+   *
+   * It uses config.textChunkThrottle (ms) to decide how long to wait after
+   * the last keystroke before committing an action.
+   */
+  var TextBox = /*#__PURE__*/function (_UndoableElement) {
+    /**
+     * @param {HTMLElement} element
+     * @param {Object} config
+     */
+    function TextBox(element) {
+      var _this2;
+      var config = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      _classCallCheck(this, TextBox);
+      _this2 = _callSuper(this, TextBox, [element]);
+      _this2.config = config;
+      _this2.throttleMs = typeof config.textChunkThrottle === "number" ? config.textChunkThrottle : 0;
+
+      // Last committed value (what undo/redo considers the "current" value)
+      _this2.previousValue = getValue(_this2.element);
+
+      // Chunking state
+      _this2.chunkActive = false;
+      _this2.chunkStartValue = _this2.previousValue;
+      _this2.chunkTimerId = null;
+
+      // Stable reference to be used to handle changes in the listeners
+      _this2.handleBoundaryKeyEvent = _this2.handleBoundaryKeyEvent.bind(_this2);
+      _this2.handleInputEvent = _this2.handleInputEvent.bind(_this2);
+      _this2.commitChunk = _this2.commitChunk.bind(_this2);
+      _this2._listenerCleanups = [];
+      _this2.attachListeners();
+      TextBox._instances.add(_this2);
+      return _this2;
+    }
+
+    /**
+     * Commit the current chunk (if any) as a TextAction in history.
+     */
+    _inherits(TextBox, _UndoableElement);
+    return _createClass(TextBox, [{
+      key: "commitChunk",
+      value: function commitChunk() {
+        if (this.chunkTimerId !== null) {
+          clearTimeout(this.chunkTimerId);
+          this.chunkTimerId = null;
+        }
+        var finalValue = getValue(this.element);
+
+        // If we never actually started a chunk but value drifted (programmatic change),
+        // fall back to a simple previous => current action.
+        if (!this.chunkActive) {
+          if (finalValue !== this.previousValue) {
+            var action = new TextAction$1(this.element, this, this.previousValue, finalValue);
+            pushActionToHistory(action);
+            this.previousValue = finalValue;
+          }
+          return;
+        }
+
+        // Chunk was active, only commit if something actually changed from the start.
+        if (finalValue !== this.chunkStartValue) {
+          var _action = new TextAction$1(this.element, this, this.chunkStartValue, finalValue);
+          pushActionToHistory(_action);
+          this.previousValue = finalValue;
+        }
+        this.chunkActive = false;
+      }
+
+      /**
+       * Called on every input event.
+       * Starts or continues a chunk and (re)schedules the commit timer.
+       */
+    }, {
+      key: "handleInputEvent",
+      value: function handleInputEvent() {
+        var _this3 = this;
+        var currentValue = getValue(this.element);
+
+        // No actual change compared to last committed value; ignore.
+        if (!this.chunkActive && currentValue === this.previousValue) {
+          return;
+        }
+
+        // First change in this chunk: remember where we started.
+        if (!this.chunkActive) {
+          this.chunkActive = true;
+          this.chunkStartValue = this.previousValue;
+        }
+
+        // If throttle is 0 or negative, commit immediately for each input.
+        if (!this.throttleMs || this.throttleMs <= 0) {
+          this.commitChunk();
+          return;
+        }
+
+        // Otherwise, debounce commits: reset the timer on each keystroke.
+        if (this.chunkTimerId !== null) {
+          clearTimeout(this.chunkTimerId);
+        }
+        // Set new timer to commit chunk
+        this.chunkTimerId = setTimeout(function () {
+          _this3.commitChunk();
+        }, this.throttleMs);
+      }
+    }, {
+      key: "handleBoundaryKeyEvent",
+      value: function handleBoundaryKeyEvent(event) {
+        if (BOUNDARY_KEYS.has(event.key)) {
+          this.commitChunk();
+        }
+      }
+
+      /**
+       * Attach listeners for input/change/blur.
+       * We record every change via input, but only push an action when:
+       *  - the throttle timer fires, or
+       *  - the element blurs / change event fires.
+       */
+    }, {
+      key: "attachListeners",
+      value: function attachListeners() {
+        this._addEventListener("input", this.handleInputEvent);
+        this._addEventListener("keydown", this.handleBoundaryKeyEvent);
+        this._addEventListener("pointerdown", this.commitChunk);
+        // On blur or change, force a commit of any pending chunk.
+        this._addEventListener("blur", this.commitChunk);
+        this._addEventListener("change", this.commitChunk);
+      }
+    }, {
+      key: "_addEventListener",
+      value: function _addEventListener(type, handler, options) {
+        var _this4 = this;
+        this.element.addEventListener(type, handler, options);
+        this._listenerCleanups.push(function () {
+          return _this4.element.removeEventListener(type, handler, options);
+        });
+      }
+    }, {
+      key: "disposeListeners",
+      value: function disposeListeners() {
+        // Clear pending timer so it can't fire after dispose
+        if (this.chunkTimerId !== null) {
+          clearTimeout(this.chunkTimerId);
+          this.chunkTimerId = null;
+        }
+        this._listenerCleanups.forEach(function (fn) {
+          return fn();
+        });
+        this._listenerCleanups = [];
+        TextBox._instances["delete"](this);
+      }
+    }], [{
+      key: "flushAll",
+      value: function flushAll() {
+        var _iterator = _createForOfIteratorHelper(TextBox._instances),
+          _step;
+        try {
+          for (_iterator.s(); !(_step = _iterator.n()).done;) {
+            var textbox = _step.value;
+            textbox.commitChunk();
+          }
+        } catch (err) {
+          _iterator.e(err);
+        } finally {
+          _iterator.f();
+        }
+      }
+    }]);
+  }(UndoableElement);
+  _defineProperty(TextBox, "_instances", new Set());
+
+  /**
    * CheckboxCommand encapsulates a toggle action on a checkbox.
    */
   var CheckboxAction = /*#__PURE__*/function (_Action) {
     /**
-     * @param {HTMLInputElement} checkbox - The checkbox element.
+     * @param {HTMLInputElement} checkboxElement - The checkbox element.
      * @param {boolean} previousState - The state before the change.
      * @param {boolean} newState - The state after the change.
      */
-    function CheckboxAction(checkbox, previousState, newState) {
+    function CheckboxAction(checkboxElement, previousState, newState) {
       var _this;
       _classCallCheck(this, CheckboxAction);
-      _this = _callSuper(this, CheckboxAction, [checkbox]);
+      _this = _callSuper(this, CheckboxAction, [checkboxElement]);
       _this.previousState = previousState;
       _this.newState = newState;
       return _this;
@@ -234,26 +620,35 @@
       var _this2;
       _classCallCheck(this, Checkbox);
       _this2 = _callSuper(this, Checkbox, [element]);
+      // Stable reference to be used to handle changes in the listeners
+      _this2.handleChange = _this2.handleChange.bind(_this2);
       _this2.attachListeners();
       return _this2;
     }
     _inherits(Checkbox, _UndoableElement);
     return _createClass(Checkbox, [{
-      key: "attachListeners",
-      value: function attachListeners() {
-        var _this3 = this;
-        this.element.addEventListener('change', function (event) {
-          // For toggling, assume the previous state is the opposite of the current.
-          var newState = _this3.element.checked;
-          var previousState = !newState;
-          _this3.createAction(previousState, newState);
-        });
-      }
-    }, {
       key: "createAction",
       value: function createAction(previousState, newState) {
         var action = new CheckboxAction(this.element, previousState, newState);
         pushActionToHistory(action);
+      }
+    }, {
+      key: "handleChange",
+      value: function handleChange() {
+        // For toggling, assume the previous state is the opposite of the current.
+        var newState = this.element.checked;
+        var previousState = !newState;
+        this.createAction(previousState, newState);
+      }
+    }, {
+      key: "attachListeners",
+      value: function attachListeners() {
+        this.element.addEventListener('change', this.handleChange);
+      }
+    }, {
+      key: "disposeListeners",
+      value: function disposeListeners() {
+        this.element.removeEventListener("change", this.handleChange);
       }
     }]);
   }(UndoableElement);
@@ -264,23 +659,29 @@
    */
   var RadioAction = /*#__PURE__*/function (_Action) {
     /**
-     * @param {HTMLInputElement} radio - The radio element that was clicked (new selection).
+     * @param {HTMLInputElement} radioElement - The radio element that was clicked (new selection).
      * @param {HTMLInputElement|null} previousRadio - The previously selected radio in the group (or null if none).
      */
-    function RadioAction(radio, previousRadio) {
+    function RadioAction(radioElement, previousRadio) {
       var _this;
       _classCallCheck(this, RadioAction);
-      _this = _callSuper(this, RadioAction, [radio]);
-      _this.newRadio = radio;
+      _this = _callSuper(this, RadioAction, [radioElement]);
+      _this.newRadio = radioElement;
       _this.previousRadio = previousRadio; // may be null if there was no previous selection
       return _this;
     }
-
-    /**
-     * Executes the action by checking the new radio and unchecking the previous one (if present).
-     */
     _inherits(RadioAction, _Action);
     return _createClass(RadioAction, [{
+      key: "affectedElements",
+      value: function affectedElements() {
+        // Filter to avoid returning null values
+        return [this.element, this.previousRadio].filter(Boolean);
+      }
+
+      /**
+       * Executes the action by checking the new radio and unchecking the previous one (if present).
+       */
+    }, {
       key: "redo",
       value: function redo() {
         this.newRadio.checked = true;
@@ -333,35 +734,45 @@
         });
       }
       // TODO: What happens if the radio button does not have a group name?
+
+      // Stable reference to be used to handle changes in the listeners
+      _this2.handleChanges = _this2.handleChanges.bind(_this2);
       _this2.attachListeners();
       return _this2;
     }
+
+    /**
+     * Creates a RadioAction using the current element and the previously selected radio.
+     * @param {HTMLInputElement|null} previousRadio
+     * @returns {RadioAction}
+     */
     _inherits(Radio, _UndoableElement);
     return _createClass(Radio, [{
-      key: "attachListeners",
-      value: function attachListeners() {
-        var _this3 = this;
-        // On change, create a RadioAction.
-        this.element.addEventListener('change', function () {
-          var groupName = _this3.element.name;
-          if (!groupName) return;
-          var previousRadio = Radio.previousSelections[groupName] || null;
-          // Update stored previous selection to the current element.
-          Radio.previousSelections[groupName] = _this3.element;
-          _this3.createAction(previousRadio);
-        });
-      }
-
-      /**
-       * Creates a RadioAction using the current element and the previously selected radio.
-       * @param {HTMLInputElement|null} previousRadio
-       * @returns {RadioAction}
-       */
-    }, {
       key: "createAction",
       value: function createAction(previousRadio) {
         var action = new RadioAction(this.element, previousRadio);
         pushActionToHistory(action);
+      }
+    }, {
+      key: "handleChanges",
+      value: function handleChanges() {
+        var groupName = this.element.name;
+        if (!groupName) return;
+        var previousRadio = Radio.previousSelections[groupName] || null;
+        // Update stored previous selection to the current element.
+        Radio.previousSelections[groupName] = this.element;
+        this.createAction(previousRadio);
+      }
+    }, {
+      key: "attachListeners",
+      value: function attachListeners() {
+        // On change, create a RadioAction.
+        this.element.addEventListener("change", this.handleChanges);
+      }
+    }, {
+      key: "disposeListeners",
+      value: function disposeListeners() {
+        this.element.removeEventListener("change", this.handleChanges);
       }
     }]);
   }(UndoableElement);
@@ -421,39 +832,48 @@
       _this2 = _callSuper(this, Range, [element]);
       // Initialize a property to store the previous value.
       _this2.oldValue = element.value;
+      // Stable reference to be used to handle changes in the listeners
+      _this2.handleChanges = _this2.handleChanges.bind(_this2);
       _this2.attachListeners();
       return _this2;
     }
+
+    /**
+     * Creates a RangeAction using the current element's old and new values.
+     * Then adds the action to the global history.
+     * @param {number|string} previousValue
+     * @param {number|string} newValue
+     * @returns {RangeAction}
+     */
     _inherits(Range, _UndoableElement);
     return _createClass(Range, [{
-      key: "attachListeners",
-      value: function attachListeners() {
-        var _this3 = this;
-        // On change, create a RangeAction.
-        this.element.addEventListener('change', function (event) {
-          var previousValue = _this3.oldValue;
-          var newValue = _this3.element.value;
-          // Only record an action if the value has actually changed.
-          if (previousValue !== newValue) {
-            _this3.createAction(previousValue, newValue);
-          }
-        });
-      }
-
-      /**
-       * Creates a RangeAction using the current element's old and new values.
-       * Then adds the action to the global history.
-       * @param {number|string} previousValue
-       * @param {number|string} newValue
-       * @returns {RangeAction}
-       */
-    }, {
       key: "createAction",
       value: function createAction(previousValue, newValue) {
         var action = new RangeAction(this.element, this, previousValue, newValue);
         pushActionToHistory(action);
         // Update the oldValue to the new value for subsequent changes.
         this.oldValue = newValue;
+      }
+    }, {
+      key: "handleChanges",
+      value: function handleChanges() {
+        // On change, create a RangeAction.
+        var previousValue = this.oldValue;
+        var newValue = this.element.value;
+        // Only record an action if the value has actually changed.
+        if (previousValue !== newValue) {
+          this.createAction(previousValue, newValue);
+        }
+      }
+    }, {
+      key: "attachListeners",
+      value: function attachListeners() {
+        this.element.addEventListener("change", this.handleChanges);
+      }
+    }, {
+      key: "disposeListeners",
+      value: function disposeListeners() {
+        this.element.removeEventListener("change", this.handleChanges);
       }
     }]);
   }(UndoableElement);
@@ -464,16 +884,16 @@
    */
   var DateTimeAction = /*#__PURE__*/function (_Action) {
     /**
-     * @param {HTMLInputElement} element - The date/time input element.
-     * @param {DateTime} dateTimeListener - The DateTime instance.
+     * @param {HTMLInputElement} dateTimeElement - The date/time input element.
+     * @param {DateTime} dateTimeWrapper - The DateTime instance.
      * @param {string} previousValue - The value before the change.
      * @param {string} newValue - The value after the change.
      */
-    function DateTimeAction(element, dateTimeListener, previousValue, newValue) {
+    function DateTimeAction(dateTimeElement, dateTimeWrapper, previousValue, newValue) {
       var _this;
       _classCallCheck(this, DateTimeAction);
-      _this = _callSuper(this, DateTimeAction, [element]);
-      _this.dateTimeListener = dateTimeListener;
+      _this = _callSuper(this, DateTimeAction, [dateTimeElement]);
+      _this.dateTimeListener = dateTimeWrapper;
       _this.previousValue = previousValue;
       _this.newValue = newValue;
       return _this;
@@ -513,42 +933,55 @@
       _this2 = _callSuper(this, DateTime, [element]);
       // Record the initial value when the element is created.
       _this2.oldValue = element.value;
+
+      // Stable reference to be used to handle changes in the listeners
+      _this2.handleChanges = _this2.handleChanges.bind(_this2);
       _this2.attachListeners();
       return _this2;
     }
+
+    /**
+     * Creates a DateTimeAction using the previous and new values.
+     * @param {string} previousValue
+     * @param {string} newValue
+     * @returns {DateTimeAction}
+     */
     _inherits(DateTime, _UndoableElement);
     return _createClass(DateTime, [{
-      key: "attachListeners",
-      value: function attachListeners() {
-        var _this3 = this;
-        // On change, create a new DateTimeAction if the value has changed.
-        var handler = function handler(event) {
-          var previousValue = _this3.oldValue;
-          var newValue = _this3.element.value;
-          if (previousValue !== newValue) {
-            _this3.createAction(previousValue, newValue);
-          }
-        };
-
-        // Attach the same handler to both 'input' and 'change'
-        ['input', 'change'].forEach(function (type) {
-          _this3.element.addEventListener(type, handler);
-        });
-      }
-
-      /**
-       * Creates a DateTimeAction using the previous and new values.
-       * @param {string} previousValue
-       * @param {string} newValue
-       * @returns {DateTimeAction}
-       */
-    }, {
       key: "createAction",
       value: function createAction(previousValue, newValue) {
         var action = new DateTimeAction(this.element, this, previousValue, newValue);
         pushActionToHistory(action);
         // Update oldValue to the new value.
         this.oldValue = newValue;
+      }
+    }, {
+      key: "handleChanges",
+      value: function handleChanges() {
+        // On change, create a new DateTimeAction if the value has changed.
+        var previousValue = this.oldValue;
+        var newValue = this.element.value;
+        if (previousValue !== newValue) {
+          this.createAction(previousValue, newValue);
+        }
+      }
+    }, {
+      key: "attachListeners",
+      value: function attachListeners() {
+        var _this3 = this;
+        // Attach the same handler to both 'input' and 'change'
+        ['input', 'change'].forEach(function (type) {
+          _this3.element.addEventListener(type, _this3.handleChanges);
+        });
+      }
+    }, {
+      key: "disposeListeners",
+      value: function disposeListeners() {
+        var _this4 = this;
+        // Attach the same handler to both 'input' and 'change'
+        ['input', 'change'].forEach(function (type) {
+          _this4.element.removeEventListener(type, _this4.handleChanges);
+        });
       }
     }]);
   }(UndoableElement);
@@ -608,37 +1041,45 @@
       _this2 = _callSuper(this, Select, [element]);
       // Record the initial selected value.
       _this2.oldValue = element.value;
+      _this2.handleChanges = _this2.handleChanges.bind(_this2);
       _this2.attachListeners();
       return _this2;
     }
+
+    /**
+     * Creates a SelectAction using the previous and new values.
+     * @param {string} previousValue
+     * @param {string} newValue
+     * @returns {SelectAction}
+     */
     _inherits(Select, _UndoableElement);
     return _createClass(Select, [{
-      key: "attachListeners",
-      value: function attachListeners() {
-        var _this3 = this;
-        // On change, record the new selection if it differs.
-        this.element.addEventListener('change', function () {
-          var previousValue = _this3.oldValue;
-          var newValue = _this3.element.value;
-          if (previousValue !== newValue) {
-            _this3.createAction(previousValue, newValue);
-          }
-        });
-      }
-
-      /**
-       * Creates a SelectAction using the previous and new values.
-       * @param {string} previousValue
-       * @param {string} newValue
-       * @returns {SelectAction}
-       */
-    }, {
       key: "createAction",
       value: function createAction(previousValue, newValue) {
         var action = new SelectAction(this.element, this, previousValue, newValue);
         pushActionToHistory(action);
         // Update oldValue for subsequent changes.
         this.oldValue = newValue;
+      }
+    }, {
+      key: "handleChanges",
+      value: function handleChanges() {
+        // On change, record the new selection if it differs.
+        var previousValue = this.oldValue;
+        var newValue = this.element.value;
+        if (previousValue !== newValue) {
+          this.createAction(previousValue, newValue);
+        }
+      }
+    }, {
+      key: "attachListeners",
+      value: function attachListeners() {
+        this.element.addEventListener("change", this.handleChanges);
+      }
+    }, {
+      key: "disposeListeners",
+      value: function disposeListeners() {
+        this.element.removeEventListener("change", this.handleChanges);
       }
     }]);
   }(UndoableElement);
@@ -650,15 +1091,15 @@
   var ColorAction = /*#__PURE__*/function (_Action) {
     /**
      * @param {HTMLInputElement} colorElement - The color input element.
-     * @param {ColorPicker} colorPickerListener - The color picker listener instance.
+     * @param {ColorPicker} colorPickerWrapper - The color picker listener instance.
      * @param {string} previousColor - The color before the change.
      * @param {string} newColor - The color after the change.
      */
-    function ColorAction(colorElement, colorPickerListener, previousColor, newColor) {
+    function ColorAction(colorElement, colorPickerWrapper, previousColor, newColor) {
       var _this;
       _classCallCheck(this, ColorAction);
       _this = _callSuper(this, ColorAction, [colorElement]);
-      _this.colorPickerListener = colorPickerListener;
+      _this.colorPickerListener = colorPickerWrapper;
       _this.previousColor = previousColor;
       _this.newColor = newColor;
       return _this;
@@ -698,74 +1139,50 @@
       _this2 = _callSuper(this, ColorPicker, [element]);
       // Record the initial color value.
       _this2.oldColor = element.value;
+
+      // Stable reference to be used to handle changes in the listeners
+      _this2.handleChanges = _this2.handleChanges.bind(_this2);
       _this2.attachListeners();
       return _this2;
     }
+
+    /**
+     * Creates a ColorAction using the previous and new color values.
+     * Then pushes the action to the global history.
+     * @param {string} previousColor
+     * @param {string} newColor
+     * @returns {ColorAction}
+     */
     _inherits(ColorPicker, _UndoableElement);
     return _createClass(ColorPicker, [{
-      key: "attachListeners",
-      value: function attachListeners() {
-        var _this3 = this;
-        // Define a single handler for both 'input' and 'change' events.
-        this.element.addEventListener('change', function () {
-          var previousColor = _this3.oldColor;
-          var newColor = _this3.element.value;
-          if (previousColor !== newColor) {
-            _this3.createAction(previousColor, newColor);
-          }
-        });
-      }
-
-      /**
-       * Creates a ColorAction using the previous and new color values.
-       * Then pushes the action to the global history.
-       * @param {string} previousColor
-       * @param {string} newColor
-       * @returns {ColorAction}
-       */
-    }, {
       key: "createAction",
       value: function createAction(previousColor, newColor) {
         var action = new ColorAction(this.element, this, previousColor, newColor);
         pushActionToHistory(action);
         this.oldColor = newColor;
       }
+    }, {
+      key: "handleChanges",
+      value: function handleChanges() {
+        var previousColor = this.oldColor;
+        var newColor = this.element.value;
+        if (previousColor !== newColor) {
+          this.createAction(previousColor, newColor);
+        }
+      }
+    }, {
+      key: "attachListeners",
+      value: function attachListeners() {
+        // Define a single handler for both 'input' and 'change' events.
+        this.element.addEventListener('change', this.handleChanges);
+      }
+    }, {
+      key: "disposeListeners",
+      value: function disposeListeners() {
+        this.element.removeEventListener('change', this.handleChanges);
+      }
     }]);
   }(UndoableElement);
-
-  /**
-   * Check if the element is contenteditable.
-   * @param {HTMLElement} element
-   * @returns {boolean}
-   */
-  function isContentEditable(element) {
-    return element.isContentEditable || element.getAttribute('contenteditable') === 'true';
-  }
-
-  /**
-   * Retrieve the current text from an element, either value or innerText.
-   * @param {HTMLElement} element
-   * @returns {string}
-   */
-  function getValue(element) {
-    if (isContentEditable(element)) {
-      return element.innerText;
-    }
-    return element.value;
-  }
-
-  /**
-   * Set the text of an element, either value or innerText.
-   * @param {HTMLElement} element
-   * @param {string} value
-   */
-  function setValue(element, value) {
-    if (isContentEditable(element)) {
-      element.innerText = value;
-    } else {
-      element.value = value;
-    }
-  }
 
   /**
    * Time window (ms) to merge consecutive keystrokes into a single chunk
@@ -781,7 +1198,7 @@
    * TextAction represents a single edit from oldValue -> newValue
    * for a text-based element (input, textarea, or contenteditable).
    */
-  var TextAction$1 = /*#__PURE__*/function (_Action) {
+  var TextAction = /*#__PURE__*/function (_Action) {
     /**
      * @param {HTMLElement} element - The text-based element.
      * @param {string} oldValue - The text before the change.
@@ -887,7 +1304,7 @@
         // the oldValue is either the finalValue of the last chunk
         // or the initial text at focus if none.
         var oldVal = this.sessionEdits.length > 0 ? this.sessionEdits[this.sessionEdits.length - 1].newValue : this.initialText;
-        var action = new TextAction$1(this.element, oldVal, newValue);
+        var action = new TextAction(this.element, oldVal, newValue);
         window.__GLOBAL_HISTORY__.push(action);
         window.__REDO_STACK__.length = 0;
         this.sessionEdits.push(action);
@@ -950,7 +1367,7 @@
         }
 
         // Create one merged action
-        var mergedAction = new TextAction$1(this.element, this.initialText, finalValue);
+        var mergedAction = new TextAction(this.element, this.initialText, finalValue);
         window.__GLOBAL_HISTORY__.push(mergedAction);
         window.__REDO_STACK__.length = 0;
       }
@@ -1010,247 +1427,222 @@
     }]);
   }(UndoableElement);
 
-  var BOUNDARY_KEYS = new Set(["Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"]);
-
   /**
-   * TextAction encapsulates a text change on an input/textarea/contenteditable.
-   * It records the previous text and the new text.
+
    */
-  var TextAction = /*#__PURE__*/function (_Action) {
-    /**
-     * @param {HTMLElement} element
-     * @param {TextBox} textBoxListener
-     * @param {string} previousText
-     * @param {string} newText
-     */
-    function TextAction(element, textBoxListener, previousText, newText) {
-      var _this;
-      _classCallCheck(this, TextAction);
-      _this = _callSuper(this, TextAction, [element]);
-      _this.textBoxListener = textBoxListener;
-      _this.previousText = previousText;
-      _this.newText = newText;
-      return _this;
-    }
-    _inherits(TextAction, _Action);
-    return _createClass(TextAction, [{
-      key: "redo",
-      value: function redo() {
-        this.textBoxListener.oldValue = this.newText;
-        setValue(this.element, this.newText);
-      }
-    }, {
-      key: "undo",
-      value: function undo() {
-        this.textBoxListener.oldValue = this.previousText;
-        setValue(this.element, this.previousText);
-      }
-    }]);
-  }(Action);
-
   /**
-   * TextBox wraps text-like elements and groups rapid edits into "chunks".
+   * Factory mapping: Each entry defines a CSS selector and a factory function
+   * that takes a DOM element and returns an instance of an undoable handler.
+   * This MUST be called at init-time, not import-time.
    *
-   * It uses config.textChunkThrottle (ms) to decide how long to wait after
-   * the last keystroke before committing an action.
    */
-  var TextBox = /*#__PURE__*/function (_UndoableElement) {
-    /**
-     * @param {HTMLElement} element
-     * @param {Object} config
-     */
-    function TextBox(element) {
-      var _this2;
-      var config = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-      _classCallCheck(this, TextBox);
-      _this2 = _callSuper(this, TextBox, [element]);
-      _this2.config = config;
-      _this2.throttleMs = typeof config.textChunkThrottle === "number" ? config.textChunkThrottle : 0;
-
-      // Last committed value (what undo/redo considers the "current" value)
-      _this2.oldValue = getValue(_this2.element);
-
-      // Chunking state
-      _this2.chunkActive = false;
-      _this2.chunkStartValue = _this2.oldValue;
-      _this2.chunkTimerId = null;
-
-      // Track instances so we can flush pending chunks globally if needed
-      TextBox._instances.add(_this2);
-      _this2.attachListeners();
-      return _this2;
-    }
-
-    /**
-     * Attach listeners for input/change/blur.
-     * We record every change via input, but only push an action when:
-     *  - the throttle timer fires, or
-     *  - the element blurs / change event fires.
-     */
-    _inherits(TextBox, _UndoableElement);
-    return _createClass(TextBox, [{
-      key: "attachListeners",
-      value: function attachListeners() {
-        var _this3 = this;
-        var handleInput = function handleInput() {
-          _this3.handleInputEvent();
-        };
-        var finalizeChunk = function finalizeChunk() {
-          _this3.commitChunk();
-        };
-        this.element.addEventListener("input", handleInput);
-        this.element.addEventListener("keydown", function (event) {
-          if (BOUNDARY_KEYS.has(event.key)) {
-            _this3.commitChunk();
-          }
-        });
-        // On blur or change, force a commit of any pending chunk.
-        this.element.addEventListener("blur", finalizeChunk);
-        this.element.addEventListener("change", finalizeChunk);
+  function createFactoryMap(config) {
+    return [
+    // Does not support input[type="password"] for security reasons
+    {
+      selector: "\n        input[type=\"text\"],\n        input[type=\"search\"],\n        input[type=\"email\"],\n        input[type=\"url\"],\n        input[type=\"number\"],\n        input[type=\"tel\"],\n        textarea,\n        [contenteditable=\"true\"]\n      ",
+      factory: function factory(element) {
+        return config.collapseTextEdits ? new TextBoxCollapse(element, config) : new TextBox(element, config);
       }
-
-      /**
-       * Called on every input event.
-       * Starts or continues a chunk and (re)schedules the commit timer.
-       */
     }, {
-      key: "handleInputEvent",
-      value: function handleInputEvent() {
-        var _this4 = this;
-        var currentValue = getValue(this.element);
-
-        // No actual change compared to last committed value; ignore.
-        if (!this.chunkActive && currentValue === this.oldValue) {
-          return;
-        }
-
-        // First change in this chunk: remember where we started.
-        if (!this.chunkActive) {
-          this.chunkActive = true;
-          this.chunkStartValue = this.oldValue;
-        }
-
-        // If throttle is 0 or negative, commit immediately for each input.
-        if (!this.throttleMs || this.throttleMs <= 0) {
-          this.commitChunk();
-          return;
-        }
-
-        // Otherwise, debounce commits: reset the timer on each keystroke.
-        if (this.chunkTimerId !== null) {
-          clearTimeout(this.chunkTimerId);
-        }
-        // Set new timer to commit chunk
-        this.chunkTimerId = setTimeout(function () {
-          _this4.commitChunk();
-        }, this.throttleMs);
+      selector: 'input[type="checkbox"]',
+      factory: function factory(el) {
+        return new Checkbox(el);
       }
-
-      /**
-       * Commit the current chunk (if any) as a TextAction in history.
-       */
     }, {
-      key: "commitChunk",
-      value: function commitChunk() {
-        if (this.chunkTimerId !== null) {
-          clearTimeout(this.chunkTimerId);
-          this.chunkTimerId = null;
-        }
-        var finalValue = getValue(this.element);
-
-        // If we never actually started a chunk but value drifted (programmatic change),
-        // fall back to a simple previous → current action.
-        if (!this.chunkActive) {
-          if (finalValue !== this.oldValue) {
-            var action = new TextAction(this.element, this, this.oldValue, finalValue);
-            pushActionToHistory(action);
-            this.oldValue = finalValue;
-          }
-          return;
-        }
-
-        // Chunk was active; only commit if something actually changed from the start.
-        if (finalValue !== this.chunkStartValue) {
-          var _action = new TextAction(this.element, this, this.chunkStartValue, finalValue);
-          pushActionToHistory(_action);
-          this.oldValue = finalValue;
-        }
-        this.chunkActive = false;
+      selector: 'input[type="radio"]',
+      factory: function factory(el) {
+        return new Radio(el);
       }
-
-      /**
-       * Optional cleanup if you ever detach this element manually.
-       */
     }, {
-      key: "dispose",
-      value: function dispose() {
-        TextBox._instances["delete"](this);
-        // If you want to be thorough, also remove event listeners (not stored here yet).
+      selector: 'input[type="range"]',
+      factory: function factory(el) {
+        return new Range(el);
       }
-
-      /**
-       * Flush any pending chunks for *all* TextBox instances.
-       * Useful to call before global undo/redo.
-       * For example if the user triggers undo while still within an editing session. (Before the throttle timer fires.)
-       */
-    }], [{
-      key: "flushAll",
-      value: function flushAll() {
-        TextBox._instances.forEach(function (instance) {
-          instance.commitChunk();
-        });
+    }, {
+      selector: 'input[type="date"], input[type="time"], input[type="datetime-local"]',
+      factory: function factory(el) {
+        return new DateTime(el);
       }
-    }]);
-  }(UndoableElement);
-
-  // Static collection of all active instances
-  TextBox._instances = new Set();
-
-  // src/index.js
-
-  // Global history arrays
-  // for simplicity, we attach these to the window so they are accessible by our modules
-  // window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
-  // window.__REDO_STACK__ = window.__REDO_STACK__ || [];
-  ensureStacks();
-  window.isMouseDown = false;
-  var config;
-  var factoryMap;
-
-  // TODO: Could be more efficient by only scanning the DOM once.
-  // If possible
-  // TODO: Instead of attaching listeners to all elements, could use event delegation maybe.
-  /**
-   * Scan the DOM for undoable elements.
-   * For each mapping in factoryMap, select all matching elements and create a handler.
-   */
-  function scanForUndoableElements() {
-    factoryMap.forEach(function (_ref) {
-      var selector = _ref.selector,
-        factory = _ref.factory;
-      var elements = document.querySelectorAll(selector);
-      elements.forEach(function (element) {
-        // Optionally, check if element is already wrapped.
-        if (!element.__undoable__) {
-          element.__undoable__ = factory(element);
-        }
-      });
-    });
+    }, {
+      selector: 'select',
+      factory: function factory(el) {
+        return new Select(el);
+      }
+    }, {
+      selector: 'input[type="color"]',
+      factory: function factory(el) {
+        return new ColorPicker(el);
+      }
+    }];
+  }
+  function buildCandidateElementSelectors(factoryMap) {
+    // Merge all selectors into one comma-separated selector list
+    // and normalize whitespace
+    return factoryMap.map(function (element) {
+      return element.selector;
+    }).join(", ").replace(/\s+/g, " ").trim();
   }
 
-  // TODO: Add mutation observer to automatically attach listeners to new elements.
+  function dispatchEvents(action, config) {
+    var dispatchStrategy = config === null || config === void 0 ? void 0 : config.undoRedoEventDispatchStrategy;
+    if (!dispatchStrategy || dispatchStrategy === "none") return;
+
+    // Check if the action has multiple affected elements
+    // Radio button groups for example
+    var targetElements = typeof action.affectedElements === "function" ? action.affectedElements() : [action.element];
+
+    // Dispatch events for each affected element
+    var _iterator = _createForOfIteratorHelper(targetElements),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var element = _step.value;
+        if (!element) continue;
+        if (dispatchStrategy === "input" || dispatchStrategy === "both") {
+          element.dispatchEvent(new Event("input", {
+            bubbles: true
+          }));
+        }
+        if (dispatchStrategy === "change" || dispatchStrategy === "both") {
+          element.dispatchEvent(new Event("change", {
+            bubbles: true
+          }));
+        }
+        // TODO: Maybe add a custom undo event here?
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+  }
+
+  var mutationObserver = null;
+
+  /**
+   * Initialize undoable wrappers for elements in the document
+   * by scanning the DOM and setting up a MutationObserver.
+   * @param factoryMap
+   */
+  function initializeUndoableWrappers(factoryMap) {
+    scanForAndWrapUndoableElements(document, factoryMap);
+    if (mutationObserver) mutationObserver.disconnect();
+    mutationObserver = createMutationObserver(factoryMap);
+  }
+
+  /**
+   * Reinitialize undoable wrappers by disposing existing ones
+   * and rescanning the DOM for undoable elements.
+   * Then sets up a new MutationObserver.
+   * @param factoryMap
+   */
+  function reinitializeUndoWrappers(factoryMap) {
+    disposeAllUndoables();
+    scanForAndWrapUndoableElements(document, factoryMap);
+    if (mutationObserver) mutationObserver.disconnect();
+    mutationObserver = createMutationObserver(factoryMap);
+  }
+
+  // Idea: Instead of attaching listeners to all elements, could use event delegation.
+  // Maybe too deep into the project now for that refactor though.
+  // At least for now.
+  /**
+   * Scan the DOM for undoable elements based of a root node
+   * and wrap them with their respective undoable handlers.
+   * @param {HTMLElement|Document} root - The root element to start scanning from.
+   * @return {void}
+   */
+  function scanForAndWrapUndoableElements(root, factoryMap) {
+    var elementSelectors = buildCandidateElementSelectors(factoryMap);
+    var candidates = [];
+
+    // Check if the root itself matches any selectors since querySelectorAll won't include it
+    if (root instanceof Element && root.matches(elementSelectors)) {
+      candidates.push(root);
+    }
+    var queriedElements = root.querySelectorAll(elementSelectors);
+    candidates.push.apply(candidates, _toConsumableArray(queriedElements));
+    for (var _i = 0, _candidates = candidates; _i < _candidates.length; _i++) {
+      var currentElement = _candidates[_i];
+      if (currentElement.__undoable__) continue;
+      var _iterator = _createForOfIteratorHelper(factoryMap),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var _step$value = _step.value,
+            selector = _step$value.selector,
+            factory = _step$value.factory;
+          if (currentElement.matches(selector)) {
+            currentElement.__undoable__ = factory(currentElement);
+            break;
+          }
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+    }
+  }
+
+  /**
+   * Sets up a MutationObserver to watch for added nodes in the DOM.
+   * When new nodes are added, it scans them for undoable elements and wraps them.
+   * @returns {MutationObserver}
+   */
+  function createMutationObserver(factoryMap) {
+    var observer = new MutationObserver(function (mutations) {
+      var _iterator2 = _createForOfIteratorHelper(mutations),
+        _step2;
+      try {
+        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+          var mutation = _step2.value;
+          var _iterator3 = _createForOfIteratorHelper(mutation.addedNodes),
+            _step3;
+          try {
+            for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+              var node = _step3.value;
+              // skip text nodes, comments, etc.
+              if (!(node instanceof HTMLElement)) continue;
+              // Scan the subtree of the added node
+              scanForAndWrapUndoableElements(node, factoryMap);
+            }
+          } catch (err) {
+            _iterator3.e(err);
+          } finally {
+            _iterator3.f();
+          }
+        }
+      } catch (err) {
+        _iterator2.e(err);
+      } finally {
+        _iterator2.f();
+      }
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    return observer;
+  }
+
+  // src/index.js
+  var config;
+  var factoryMap;
+  window.isMouseDown = false;
 
   /**
    * Global undo function: undoes the most recent action.
    */
   function undo() {
-    // Make sure any in-progress edits are finalized. (Before the throttle time is up)
-    if (typeof TextBox.flushAll === 'function') {
-      TextBox.flushAll();
-    }
+    flushActiveUndoables();
     if (window.__GLOBAL_HISTORY__.length > 0) {
       var action = window.__GLOBAL_HISTORY__.pop();
-      action.undo();
+      activateHistoryReplayProtection(function () {
+        action.undo();
+        dispatchEvents(action, config);
+      });
       pushActionToRedoStack(action);
     }
   }
@@ -1259,15 +1651,23 @@
    * Global redo function: re-executes the most recently undone action.
    */
   function redo() {
-    if (typeof TextBox.flushAll === 'function') {
-      TextBox.flushAll();
-    }
+    flushActiveUndoables();
     if (window.__REDO_STACK__.length > 0) {
       var action = window.__REDO_STACK__.pop();
-      action.redo();
+      activateHistoryReplayProtection(function () {
+        action.redo();
+        dispatchEvents(action, config);
+      });
       pushActionToHistory(action, {
         clearRedo: false
       });
+    }
+  }
+
+  // Make sure any in-progress edits are finalized. (Before the throttle time is up for example)
+  function flushActiveUndoables() {
+    if (typeof TextBox.flushAll === 'function') {
+      TextBox.flushAll();
     }
   }
   function addGlobalUndoRedoShortcuts() {
@@ -1284,6 +1684,9 @@
       }
     });
   }
+
+  // TODO: needed?
+  // For the color picker for example, check if mouse is down to avoid capturing intermediate states
   function addMouseDownListeners() {
     document.addEventListener('mousedown', function () {
       return window.isMouseDown = true;
@@ -1294,59 +1697,54 @@
   }
 
   /**
+   * Updates config and optionally reinitializes wrappers.
+   * @param {object} partialConfig
+   * @param {{ reinitialize?: boolean }} [options]
+   * @returns {object} updated config
+   */
+  function updateConfigAndReinitialize() {
+    var partialConfig = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var _options$reinitialize = options.reinitialize,
+      reinitialize = _options$reinitialize === void 0 ? true : _options$reinitialize;
+    config = updateConfig(partialConfig);
+    if (reinitialize) {
+      factoryMap = createFactoryMap(config);
+      reinitializeUndoWrappers(factoryMap);
+    }
+    return config;
+  }
+
+  /**
+   * Resets config and optionally reinitializes wrappers.
+   * @param {{ reinitialize?: boolean }} [options]
+   * @returns {object} reset config
+   */
+  function resetConfigAndReinitialize() {
+    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var _options$reinitialize2 = options.reinitialize,
+      reinitialize = _options$reinitialize2 === void 0 ? true : _options$reinitialize2;
+    config = resetConfigToDefaults();
+    if (reinitialize) {
+      factoryMap = createFactoryMap(config);
+      reinitializeUndoWrappers(factoryMap);
+    }
+    return config;
+  }
+
+  /**
    * Initialization function.
    * Scans the DOM for undoable elements and attaches their handlers.
+   * Sets up mutation observers to handle dynamically added elements.
+   * Also sets up global keyboard shortcuts for undo/redo.
    */
   function init() {
     config = getConfig();
-
-    /**
-     * Factory mapping: Each entry defines a CSS selector and a factory function
-     * that takes a DOM element and returns an instance of an undoable handler.
-     */
-    factoryMap = [{
-      // Input types for text, search, email, url, number, tel + textarea
-      // (Skipping password)
-      selector: "input[type=\"text\"],\n               input[type=\"search\"],\n               input[type=\"email\"],\n               input[type=\"url\"],\n               input[type=\"number\"],\n               input[type=\"tel\"],\n               textarea,\n               [contenteditable=\"true\"]",
-      factory: function factory(element) {
-        return config.collapseTextEdits ? new TextBoxCollapse(element, config) : new TextBox(element, config);
-      }
-    }, {
-      selector: 'input[type="checkbox"]',
-      factory: function factory(element) {
-        return new Checkbox(element);
-      }
-    }, {
-      selector: 'input[type="radio"]',
-      factory: function factory(element) {
-        return new Radio(element);
-      }
-    }, {
-      selector: 'input[type="range"]',
-      factory: function factory(element) {
-        return new Range(element);
-      }
-    }, {
-      selector: 'input[type="date"], input[type="time"], input[type="datetime-local"]',
-      factory: function factory(element) {
-        return new DateTime(element);
-      }
-    }, {
-      selector: 'select',
-      factory: function factory(element) {
-        return new Select(element);
-      }
-    }, {
-      selector: 'input[type="color"]',
-      factory: function factory(element) {
-        return new ColorPicker(element);
-      }
-    }
-    // Future element types can be added here.
-    ];
-    addMouseDownListeners();
-    scanForUndoableElements();
+    factoryMap = createFactoryMap(config);
+    ensureHistoryStacks();
+    initializeUndoableWrappers(factoryMap);
     addGlobalUndoRedoShortcuts();
+    addMouseDownListeners();
   }
 
   // Auto-initialize when DOM is ready.
@@ -1362,13 +1760,17 @@
     // Expose the API globally (UMD style)
     window.UndoableUI = {
       undo: undo,
-      redo: redo
+      redo: redo,
+      updateConfig: updateConfigAndReinitialize,
+      resetConfigToDefaults: resetConfigAndReinitialize
     };
   }
 
   exports.init = init;
   exports.redo = redo;
+  exports.resetConfigAndReinitialize = resetConfigAndReinitialize;
   exports.undo = undo;
+  exports.updateConfigAndReinitialize = updateConfigAndReinitialize;
 
   Object.defineProperty(exports, '__esModule', { value: true });
 
