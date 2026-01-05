@@ -5,7 +5,7 @@ export function registerInstance (instance) {
 }
 
 export function unregisterInstance (instance) {
-    instance.delete(instance)
+    instances.delete(instance)
 }
 
 export function disposeAllUndoables () {
