@@ -19,6 +19,7 @@ import { TextBoxCollapse } from "./elements/TextBoxCollapse.js";
  */
 export function createFactoryMap(config) {
     return [
+        // Does not support input[type="password"] for security reasons
         {
             selector: `
         input[type="text"],
@@ -61,3 +62,15 @@ export function createFactoryMap(config) {
         },
     ];
 }
+
+
+export function buildCandidateElementSelectors(factoryMap) {
+    // Merge all selectors into one comma-separated selector list
+    // and normalize whitespace
+    return factoryMap
+        .map(element => element.selector)
+        .join(", ")
+        .replace(/\s+/g, " ")
+        .trim()
+}
+

@@ -1,16 +1,9 @@
 // src/index.js
-import { Checkbox } from './undoable-elements/elements/Checkbox.js';
-import { Radio } from "./undoable-elements/elements/Radio";
-import { Range } from './undoable-elements/elements/Range.js';
-import { DateTime } from "./undoable-elements/elements/DateTime";
-import { Select } from "./undoable-elements/elements/Select";
-import { ColorPicker } from "./undoable-elements/elements/ColorPicker";
-import { TextBoxCollapse } from "./undoable-elements/elements/TextBoxCollapse";
 import { TextBox } from "./undoable-elements/elements/TextBox";
 import { getConfig } from "./config";
 import { ensureStacks, pushActionToHistory, pushActionToRedoStack } from "./history";
 import { disposeAllUndoables } from "./undoable-elements/elementRegistry";
-import { createFactoryMap } from "./undoable-elements/elementFactoryMap";
+import { buildCandidateElementSelectors, createFactoryMap } from "./undoable-elements/elementFactoryMap";
 
 // Global history arrays
 // for simplicity, we attach these to the window so they are accessible by our modules
@@ -24,25 +17,39 @@ let config;
 let factoryMap;
 
 
-
-// TODO: Could be more efficient by only scanning the DOM once.
-// If possible, maybe use the factory to pattern match the node type
-// TODO: Instead of attaching listeners to all elements, could use event delegation maybe.
+// Idea: Instead of attaching listeners to all elements, could use event delegation.
+// Maybe too deep into the project now for that refactor though.
+// At least for now.
 /**
- * Scan the DOM for undoable elements.
- * For each mapping in factoryMap, select all matching elements and create a wrapper.
+ * Scan the DOM for undoable elements based of a root node
+ * and wrap them with their respective undoable handlers.
+ * @param {HTMLElement|Document} [root=document] - The root element to start scanning from.
+ * Defaults to the entire document.
+ * @return {void}
  */
 function scanForAndWrapUndoableElements(root) {
-    factoryMap.forEach(({ selector, factory }) => {
-        const elements = root.querySelectorAll(selector);
-        elements.forEach((element) => {
-            // Optionally, check if element is already wrapped.
-            if (!element.__undoable__) {
-                // If the element exist in the factory, wrap it.
-                element.__undoable__ = factory(element);
+    const elementSelectors = buildCandidateElementSelectors(factoryMap)
+
+    const candidates = [];
+
+    // Check if the root itself matches any selectors since querySelectorAll won't include it
+    if ( root instanceof Element && root.matches(elementSelectors) ) {
+        candidates.push(root);
+    }
+
+    const queriedElements = root.querySelectorAll(elementSelectors)
+    candidates.push(...queriedElements);
+
+    for ( const currentElement of candidates ) {
+        if ( currentElement.__undoable__ ) continue;
+
+        for ( const { selector, factory } of factoryMap ) {
+            if ( currentElement.matches(selector) ) {
+                currentElement.__undoable__ = factory(currentElement)
+                break;
             }
-        });
-    });
+        }
+    }
 }
 
 /**
@@ -84,7 +91,6 @@ function flushActiveUndoables() {
         TextBox.flushAll();
     }
 }
-
 
 /**
  * Global undo function: undoes the most recent action.
