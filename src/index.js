@@ -155,6 +155,7 @@ export function init() {
     addMouseDownListeners();
     scanForAndWrapUndoableElements(document);
     setupMutationObserver();
+    initializeUndoableWrappers(factoryMap);
     addGlobalUndoRedoShortcuts();
 }
 
