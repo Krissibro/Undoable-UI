@@ -53,7 +53,7 @@ function render(hostEl) {
 
         <label class="cfg-check cfg-span-2">
           <input id="cfg_reinitialize" type="checkbox" checked />
-          <span>reinitialize wrappers</span>
+          <span>Reinitialize wrappers and use updated config</span>
         </label>
       </div>
 
