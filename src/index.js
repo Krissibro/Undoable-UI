@@ -9,82 +9,7 @@ import { initializeUndoableWrappers, reinitializeUndoWrappers } from "./undoable
 
 let config;
 let factoryMap;
-
-
-// Idea: Instead of attaching listeners to all elements, could use event delegation.
-// Maybe too deep into the project now for that refactor though.
-// At least for now.
-/**
- * Scan the DOM for undoable elements based of a root node
- * and wrap them with their respective undoable handlers.
- * @param {HTMLElement|Document} [root=document] - The root element to start scanning from.
- * Defaults to the entire document.
- * @return {void}
- */
-function scanForAndWrapUndoableElements(root) {
-    const elementSelectors = buildCandidateElementSelectors(factoryMap)
-
-    const candidates = [];
-
-    // Check if the root itself matches any selectors since querySelectorAll won't include it
-    if ( root instanceof Element && root.matches(elementSelectors) ) {
-        candidates.push(root);
-    }
-
-    const queriedElements = root.querySelectorAll(elementSelectors)
-    candidates.push(...queriedElements);
-
-    for ( const currentElement of candidates ) {
-        if ( currentElement.__undoable__ ) continue;
-
-        for ( const { selector, factory } of factoryMap ) {
-            if ( currentElement.matches(selector) ) {
-                currentElement.__undoable__ = factory(currentElement)
-                break;
-            }
-        }
-    }
-}
-
-/**
- * Sets up a MutationObserver to watch for added nodes in the DOM.
- * When new nodes are added, it scans them for undoable elements and wraps them.
- * @returns {MutationObserver}
- */
-function setupMutationObserver() {
-    const observer = new MutationObserver((mutations) => {
-        for ( const mutation of mutations ) {
-            for ( const node of mutation.addedNodes ) {
-                // skip text nodes, comments, etc.
-                if ( !(node instanceof HTMLElement) ) continue;
-
-                // Check if the added node itself matches any factory selectors
-                factoryMap.forEach( ({ selector, factory }) => {
-                    if ( node.matches(selector) && !node.__undoable__ ) {
-                        node.__undoable__ = factory(node);
-                    }
-                });
-
-                // Also scan the subtree of the added node
-                scanForAndWrapUndoableElements(node)
-            }
-        }
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-    });
-
-    return observer;
-}
-
-// Make sure any in-progress edits are finalized. (Before the throttle time is up for example)
-function flushActiveUndoables() {
-    if (typeof TextBox.flushAll === 'function') {
-        TextBox.flushAll();
-    }
-}
+window.isMouseDown = false;
 
 /**
  * Global undo function: undoes the most recent action.
@@ -145,6 +70,7 @@ function addGlobalUndoRedoShortcuts() {
 }
 
 // TODO: needed?
+// For the color picker for example, check if mouse is down to avoid capturing intermediate states
 function addMouseDownListeners() {
     document.addEventListener('mousedown', () => window.isMouseDown = true);
     document.addEventListener('mouseup',   () => window.isMouseDown = false);
@@ -162,6 +88,7 @@ export function init() {
     ensureHistoryStacks();
     initializeUndoableWrappers(factoryMap);
     addGlobalUndoRedoShortcuts();
+    addMouseDownListeners();
 }
 
 // Auto-initialize when DOM is ready.
