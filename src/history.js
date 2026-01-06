@@ -20,6 +20,7 @@ function trimHistory() {
 }
 
 export function pushActionToHistory(action, { clearRedo = true } = {}) {
+    // Extra safety check to avoid recording actions during undo/redo operations
     if (isHistoryReplaying()) return;
     window.__GLOBAL_HISTORY__.push(action);
     trimHistory();

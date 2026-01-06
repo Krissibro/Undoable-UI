@@ -46,8 +46,6 @@ export class Range extends UndoableElement {
         super(element);
         // Initialize a property to store the previous value.
         this.oldValue = element.value;
-        // Stable reference to be used to handle changes in the listeners
-        this.handleChanges = this.handleChanges.bind(this)
         this.attachListeners();
     }
 
@@ -76,10 +74,6 @@ export class Range extends UndoableElement {
     }
 
     attachListeners() {
-        this.element.addEventListener("change", this.handleChanges);
-    }
-
-    disposeListeners() {
-        this.element.removeEventListener("change", this.handleChanges)
+        this.addProtectedListener("change", this.handleChanges);
     }
 }

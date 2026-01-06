@@ -46,9 +46,6 @@ export class DateTime extends UndoableElement {
         super(element);
         // Record the initial value when the element is created.
         this.oldValue = element.value;
-
-        // Stable reference to be used to handle changes in the listeners
-        this.handleChanges = this.handleChanges.bind(this)
         this.attachListeners();
     }
 
@@ -77,14 +74,7 @@ export class DateTime extends UndoableElement {
     attachListeners() {
         // Attach the same handler to both 'input' and 'change'
         ['input', 'change'].forEach(type => {
-            this.element.addEventListener(type, this.handleChanges);
-        });
-    }
-
-    disposeListeners() {
-        // Attach the same handler to both 'input' and 'change'
-        ['input', 'change'].forEach(type => {
-            this.element.removeEventListener(type, this.handleChanges);
+            this.addProtectedListener(type, this.handleChanges);
         });
     }
 }

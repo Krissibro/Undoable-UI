@@ -59,10 +59,9 @@ export class TextBox extends UndoableElement {
      * @param {HTMLElement} element
      * @param {Object} config
      */
-    constructor(element, config = {}) {
+    constructor(element, config ) {
         super(element);
 
-        this.config = config;
         this.throttleMs =
             typeof config.textChunkThrottle === "number"
                 ? config.textChunkThrottle
@@ -76,12 +75,6 @@ export class TextBox extends UndoableElement {
         this.chunkStartValue = this.previousValue;
         this.chunkTimerId = null;
 
-        // Stable reference to be used to handle changes in the listeners
-        this.handleBoundaryKeyEvent = this.handleBoundaryKeyEvent.bind(this)
-        this.handleInputEvent = this.handleInputEvent.bind(this)
-        this.commitChunk = this.commitChunk.bind(this)
-
-        this._listenerCleanups = [];
         this.attachListeners();
         TextBox._instances.add(this)
     }
@@ -176,28 +169,20 @@ export class TextBox extends UndoableElement {
      *  - the element blurs / change event fires.
      */
     attachListeners() {
-        this._addEventListener("input", this.handleInputEvent);
-        this._addEventListener("keydown", this.handleBoundaryKeyEvent);
-        this._addEventListener("pointerdown", this.commitChunk)
+        this.addProtectedListener("input", this.handleInputEvent);
+        this.addProtectedListener("keydown", this.handleBoundaryKeyEvent);
+        this.addProtectedListener("pointerdown", this.commitChunk)
         // On blur or change, force a commit of any pending chunk.
-        this._addEventListener("blur", this.commitChunk);
-        this._addEventListener("change", this.commitChunk);
+        this.addProtectedListener("blur", this.commitChunk);
+        this.addProtectedListener("change", this.commitChunk);
     }
 
-    _addEventListener(type, handler, options) {
-        this.element.addEventListener(type, handler, options)
-        this._listenerCleanups.push(() => this.element.removeEventListener(type, handler, options));
-    }
-
-    disposeListeners() {
+    extraSubclassCleanup() {
         // Clear pending timer so it can't fire after dispose
         if (this.chunkTimerId !== null) {
             clearTimeout(this.chunkTimerId);
             this.chunkTimerId = null;
         }
-
-        this._listenerCleanups.forEach((fn) => fn())
-        this._listenerCleanups = []
         TextBox._instances.delete(this);
     }
 

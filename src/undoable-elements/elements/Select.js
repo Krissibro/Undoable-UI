@@ -46,7 +46,6 @@ export class Select extends UndoableElement {
         super(element);
         // Record the initial selected value.
         this.oldValue = element.value;
-        this.handleChanges = this.handleChanges.bind(this)
         this.attachListeners();
     }
 
@@ -73,11 +72,6 @@ export class Select extends UndoableElement {
     }
 
     attachListeners() {
-        this.element.addEventListener("change", this.handleChanges);
+        this.addProtectedListener("change", this.handleChanges);
     }
-
-    disposeListeners() {
-        this.element.removeEventListener("change", this.handleChanges)
-    }
-
 }

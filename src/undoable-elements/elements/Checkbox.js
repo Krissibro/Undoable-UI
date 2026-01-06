@@ -33,8 +33,6 @@ export class CheckboxAction extends Action {
 export class Checkbox extends UndoableElement {
     constructor(element) {
         super(element);
-        // Stable reference to be used to handle changes in the listeners
-        this.handleChange = this.handleChange.bind(this)
         this.attachListeners();
     }
 
@@ -43,7 +41,7 @@ export class Checkbox extends UndoableElement {
         pushActionToHistory(action);
     }
 
-    handleChange () {
+    handleChange() {
         // For toggling, assume the previous state is the opposite of the current.
         const newState = this.element.checked;
         const previousState = !newState;
@@ -51,10 +49,6 @@ export class Checkbox extends UndoableElement {
     }
 
     attachListeners() {
-        this.element.addEventListener('change', this.handleChange);
-    }
-
-    disposeListeners() {
-        this.element.removeEventListener("change", this.handleChange)
+        this.addProtectedListener('change', this.handleChange);
     }
 }

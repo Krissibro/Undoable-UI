@@ -46,9 +46,6 @@ export class ColorPicker extends UndoableElement {
         super(element);
         // Record the initial color value.
         this.oldColor = element.value;
-
-        // Stable reference to be used to handle changes in the listeners
-        this.handleChanges = this.handleChanges.bind(this);
         this.attachListeners();
     }
 
@@ -75,10 +72,6 @@ export class ColorPicker extends UndoableElement {
 
     attachListeners() {
         // Define a single handler for both 'input' and 'change' events.
-        this.element.addEventListener('change', this.handleChanges)
-    }
-
-    disposeListeners() {
-        this.element.removeEventListener('change', this.handleChanges)
+        this.addProtectedListener('change', this.handleChanges)
     }
 }

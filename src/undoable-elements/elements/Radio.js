@@ -74,9 +74,6 @@ export class Radio extends UndoableElement {
             });
         }
         // TODO: What happens if the radio button does not have a group name?
-
-        // Stable reference to be used to handle changes in the listeners
-        this.handleChanges = this.handleChanges.bind(this)
         this.attachListeners();
     }
 
@@ -102,12 +99,6 @@ export class Radio extends UndoableElement {
 
     attachListeners() {
         // On change, create a RadioAction.
-        this.element.addEventListener("change", this.handleChanges);
+        this.addProtectedListener("change", this.handleChanges);
     }
-
-    disposeListeners() {
-        this.element.removeEventListener("change", this.handleChanges)
-    }
-
-
 }
