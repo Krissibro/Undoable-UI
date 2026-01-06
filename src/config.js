@@ -1,6 +1,6 @@
 
 export const defaultConfig = Object.freeze({
-    maxUndoStack:       100,
+    maxHistorySize:     100,
     textChunkThrottle:  300,
     collapseTextEdits:  false,
     // Dispatch native events after undo/redo so app UI updates.
@@ -13,11 +13,17 @@ export const defaultConfig = Object.freeze({
 
 });
 
-
+let baselineConfig = { ...defaultConfig };
 let currentConfig = { ...defaultConfig };
 
 
 export function getConfig() {
+    return currentConfig;
+}
+
+export function setBaselineConfig(partial = {}) {
+    baselineConfig = { ...defaultConfig, ...partial };
+    currentConfig  = { ...baselineConfig };
     return currentConfig;
 }
 
@@ -33,7 +39,7 @@ export function updateConfig(partialConfig = {}) {
 
 /** Resets the current configuration to the default settings.
  */
-export function resetConfigToDefaults() {
-    currentConfig = { ...defaultConfig };
+export function resetConfigToBaseline() {
+    currentConfig = { ...baselineConfig };
     return currentConfig;
 }

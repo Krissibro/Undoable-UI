@@ -11,9 +11,9 @@ export function clearRedoStack() {
 }
 
 function trimHistory() {
-    const { maxUndoStack } = getConfig();
-    if (Number.isFinite(maxUndoStack) && maxUndoStack > 0) {
-        while (window.__GLOBAL_HISTORY__.length > maxUndoStack) {
+    const { maxHistorySize } = getConfig();
+    if (Number.isFinite(maxHistorySize) && maxHistorySize > 0) {
+        while (window.__GLOBAL_HISTORY__.length > maxHistorySize) {
             window.__GLOBAL_HISTORY__.shift();
         }
     }

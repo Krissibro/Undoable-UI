@@ -1,6 +1,6 @@
 // src/index.js
 import { TextBox } from "./undoable-elements/elements/TextBox";
-import { getConfig, resetConfigToDefaults, updateConfig } from "./config";
+import { getConfig, resetConfigToBaseline, setBaselineConfig, updateConfig } from "./config";
 import { ensureHistoryStacks, pushActionToHistory, pushActionToRedoStack } from "./history";
 import { createFactoryMap } from "./undoable-elements/elementFactoryMap";
 import { activateHistoryReplayProtection } from "./historyReplayProtection";
@@ -110,7 +110,7 @@ export function updateConfigAndReinitialize(partialConfig = {}, options = {}) {
 export function resetConfigAndReinitialize(options = {}) {
     const { reinitialize = true } = options;
 
-    config = resetConfigToDefaults();
+    config = resetConfigToBaseline();
 
     if (reinitialize) {
         factoryMap = createFactoryMap(config);
@@ -127,29 +127,47 @@ export function resetConfigAndReinitialize(options = {}) {
  * Sets up mutation observers to handle dynamically added elements.
  * Also sets up global keyboard shortcuts for undo/redo.
  */
-export function init() {
-    config = getConfig();
+export function init(options = {}) {
+    const {
+        config: userConfig = {}
+    } = options;
+    config = setBaselineConfig(userConfig);
     factoryMap = createFactoryMap(config);
-
     ensureHistoryStacks();
-    initializeUndoableWrappers(factoryMap);
-    addGlobalUndoRedoShortcuts();
-    addMouseDownListeners();
+
+    onDomReady(() => {
+        initializeUndoableWrappers(factoryMap);
+        addGlobalUndoRedoShortcuts();
+        addMouseDownListeners();
+    });
+
+    return config;
+}
+
+function onDomReady(fn) {
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", fn, { once: true });
+    } else {
+        fn();
+    }
 }
 
 // Auto-initialize when DOM is ready.
 if (typeof window !== 'undefined') {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => init());
-    } else {
-        init();
-    }
+    // TODO: Consider if auto-initialization is desired
+    // if (document.readyState === 'loading') {
+    //     document.addEventListener('DOMContentLoaded', () => init());
+    // } else {
+    //     init();
+    // }
 
     // Expose the API globally (UMD style)
     window.UndoableUI = {
+        init,
         undo,
         redo,
         updateConfig: updateConfigAndReinitialize,
-        resetConfigToDefaults: resetConfigAndReinitialize,
+        resetConfig: resetConfigAndReinitialize,
+        getConfig,
     };
 }
