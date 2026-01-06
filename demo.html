@@ -7,6 +7,14 @@
 
     <!-- Your built UMD bundle exposes window.UndoableUI -->
     <script src="dist/undoable-ui.umd.js"></script>
+    <script>
+        UndoableUI.init({
+            config: {
+                maxHistorySize: 100,
+                textChunkThrottle: 300
+            }
+        });
+    </script>
 
     <link rel="stylesheet" href="styles.css" />
 </head>

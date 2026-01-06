@@ -190,6 +190,20 @@ function disposeAllUndoables() {
   instances.clear();
 }
 
+// Counter instead of boolean to support nested calls in the future
+var historyReplayDepth = 0;
+function activateHistoryReplayProtection(fn) {
+  historyReplayDepth++;
+  try {
+    return fn();
+  } finally {
+    historyReplayDepth--;
+  }
+}
+function isHistoryReplaying() {
+  return historyReplayDepth > 0;
+}
+
 /**
  * Base class for undoable elements.
  * Subclasses should implement:
@@ -200,30 +214,86 @@ var UndoableElement = /*#__PURE__*/function () {
   function UndoableElement(element) {
     _classCallCheck(this, UndoableElement);
     this.element = element;
+    this._listenerCleanups = [];
+    this._disposed = false;
     registerInstance(this);
   }
+
+  /**
+   * Creates an Action object for the given event.
+   * Must be implemented by subclasses.
+   * @param event
+   */
   return _createClass(UndoableElement, [{
-    key: "attachListeners",
-    value: function attachListeners() {
-      throw new Error("attachListeners() must be implemented by subclasses.");
-    }
-  }, {
     key: "createAction",
     value: function createAction(event) {
       throw new Error("createCommand() must be implemented by subclasses.");
     }
+
+    /**
+     * Attaches necessary event listeners to the element.
+     * Must be implemented by subclasses.
+     */
+  }, {
+    key: "attachListeners",
+    value: function attachListeners() {
+      throw new Error("attachListeners() must be implemented by subclasses.");
+    }
+
+    /**
+     * Creates an event listener that is protected against history replay.
+     * This prevents timers/chunks/cache updates from running during replay.
+     * @param type
+     * @param handler
+     * @param options
+     * @returns {function(*): *}
+     */
+  }, {
+    key: "addProtectedListener",
+    value: function addProtectedListener(type, handler) {
+      var _this = this;
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : undefined;
+      // Wrap the handler to prevent execution during history replay
+      var wrappedHandler = function wrappedHandler(event) {
+        if (isHistoryReplaying()) return;
+        // Call the original handler
+        // This ensures the correct 'this' context is maintained
+        return handler.call(_this, event);
+      };
+
+      // Attach the event listener to the element with the wrapped handler
+      this.element.addEventListener(type, wrappedHandler, options);
+
+      // Store the cleanup function to remove the listener later
+      // With optional extra dispose behaviour per subclass
+      this._listenerCleanups.push(function () {
+        _this.element.removeEventListener(type, wrappedHandler, options);
+      });
+
+      // Return the wrapped handler in case it's needed elsewhere
+      return wrappedHandler;
+    }
+
+    /**
+     * Cleans up event listeners and unregisters the instance.
+     */
   }, {
     key: "dispose",
     value: function dispose() {
-      this.disposeListeners();
+      // Avoid double disposal
+      if (this._disposed) return;
+      this._disposed = true;
+      this._listenerCleanups.forEach(function (cleanup) {
+        return cleanup();
+      });
+      this._listenerCleanups = [];
+      this.extraSubclassCleanup();
       this.element.__undoable__ = undefined;
       unregisterInstance(this);
     }
   }, {
-    key: "disposeListeners",
-    value: function disposeListeners() {
-      throw new Error("disposeListeners() must be implemented by subclasses.");
-    }
+    key: "extraSubclassCleanup",
+    value: function extraSubclassCleanup() {}
   }]);
 }();
 
@@ -254,7 +324,7 @@ var Action = /*#__PURE__*/function () {
 }();
 
 var defaultConfig = Object.freeze({
-  maxUndoStack: 100,
+  maxHistorySize: 100,
   textChunkThrottle: 300,
   collapseTextEdits: false,
   // Dispatch native events after undo/redo so app UI updates.
@@ -265,8 +335,15 @@ var defaultConfig = Object.freeze({
   // scopeStrategy: 'global', // or 'local'
   // branchingHistory: false,
 });
+var baselineConfig = _objectSpread2({}, defaultConfig);
 var currentConfig = _objectSpread2({}, defaultConfig);
 function getConfig() {
+  return currentConfig;
+}
+function setBaselineConfig() {
+  var partial = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  baselineConfig = _objectSpread2(_objectSpread2({}, defaultConfig), partial);
+  currentConfig = _objectSpread2({}, baselineConfig);
   return currentConfig;
 }
 
@@ -283,23 +360,9 @@ function updateConfig() {
 
 /** Resets the current configuration to the default settings.
  */
-function resetConfigToDefaults() {
-  currentConfig = _objectSpread2({}, defaultConfig);
+function resetConfigToBaseline() {
+  currentConfig = _objectSpread2({}, baselineConfig);
   return currentConfig;
-}
-
-// Counter instead of boolean to support nested calls in the future
-var historyReplayDepth = 0;
-function activateHistoryReplayProtection(fn) {
-  historyReplayDepth++;
-  try {
-    return fn();
-  } finally {
-    historyReplayDepth--;
-  }
-}
-function isHistoryReplaying() {
-  return historyReplayDepth > 0;
 }
 
 function ensureHistoryStacks() {
@@ -311,9 +374,9 @@ function clearRedoStack() {
 }
 function trimHistory() {
   var _getConfig = getConfig(),
-    maxUndoStack = _getConfig.maxUndoStack;
-  if (Number.isFinite(maxUndoStack) && maxUndoStack > 0) {
-    while (window.__GLOBAL_HISTORY__.length > maxUndoStack) {
+    maxHistorySize = _getConfig.maxHistorySize;
+  if (Number.isFinite(maxHistorySize) && maxHistorySize > 0) {
+    while (window.__GLOBAL_HISTORY__.length > maxHistorySize) {
       window.__GLOBAL_HISTORY__.shift();
     }
   }
@@ -322,6 +385,7 @@ function pushActionToHistory(action) {
   var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
     _ref$clearRedo = _ref.clearRedo,
     clearRedo = _ref$clearRedo === void 0 ? true : _ref$clearRedo;
+  // Extra safety check to avoid recording actions during undo/redo operations
   if (isHistoryReplaying()) return;
   window.__GLOBAL_HISTORY__.push(action);
   trimHistory();
@@ -416,12 +480,10 @@ var TextBox = /*#__PURE__*/function (_UndoableElement) {
    * @param {HTMLElement} element
    * @param {Object} config
    */
-  function TextBox(element) {
+  function TextBox(element, config) {
     var _this2;
-    var config = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     _classCallCheck(this, TextBox);
     _this2 = _callSuper(this, TextBox, [element]);
-    _this2.config = config;
     _this2.throttleMs = typeof config.textChunkThrottle === "number" ? config.textChunkThrottle : 0;
 
     // Last committed value (what undo/redo considers the "current" value)
@@ -431,12 +493,6 @@ var TextBox = /*#__PURE__*/function (_UndoableElement) {
     _this2.chunkActive = false;
     _this2.chunkStartValue = _this2.previousValue;
     _this2.chunkTimerId = null;
-
-    // Stable reference to be used to handle changes in the listeners
-    _this2.handleBoundaryKeyEvent = _this2.handleBoundaryKeyEvent.bind(_this2);
-    _this2.handleInputEvent = _this2.handleInputEvent.bind(_this2);
-    _this2.commitChunk = _this2.commitChunk.bind(_this2);
-    _this2._listenerCleanups = [];
     _this2.attachListeners();
     TextBox._instances.add(_this2);
     return _this2;
@@ -528,34 +584,21 @@ var TextBox = /*#__PURE__*/function (_UndoableElement) {
   }, {
     key: "attachListeners",
     value: function attachListeners() {
-      this._addEventListener("input", this.handleInputEvent);
-      this._addEventListener("keydown", this.handleBoundaryKeyEvent);
-      this._addEventListener("pointerdown", this.commitChunk);
+      this.addProtectedListener("input", this.handleInputEvent);
+      this.addProtectedListener("keydown", this.handleBoundaryKeyEvent);
+      this.addProtectedListener("pointerdown", this.commitChunk);
       // On blur or change, force a commit of any pending chunk.
-      this._addEventListener("blur", this.commitChunk);
-      this._addEventListener("change", this.commitChunk);
+      this.addProtectedListener("blur", this.commitChunk);
+      this.addProtectedListener("change", this.commitChunk);
     }
   }, {
-    key: "_addEventListener",
-    value: function _addEventListener(type, handler, options) {
-      var _this4 = this;
-      this.element.addEventListener(type, handler, options);
-      this._listenerCleanups.push(function () {
-        return _this4.element.removeEventListener(type, handler, options);
-      });
-    }
-  }, {
-    key: "disposeListeners",
-    value: function disposeListeners() {
+    key: "extraSubclassCleanup",
+    value: function extraSubclassCleanup() {
       // Clear pending timer so it can't fire after dispose
       if (this.chunkTimerId !== null) {
         clearTimeout(this.chunkTimerId);
         this.chunkTimerId = null;
       }
-      this._listenerCleanups.forEach(function (fn) {
-        return fn();
-      });
-      this._listenerCleanups = [];
       TextBox._instances["delete"](this);
     }
   }], [{
@@ -618,8 +661,6 @@ var Checkbox = /*#__PURE__*/function (_UndoableElement) {
     var _this2;
     _classCallCheck(this, Checkbox);
     _this2 = _callSuper(this, Checkbox, [element]);
-    // Stable reference to be used to handle changes in the listeners
-    _this2.handleChange = _this2.handleChange.bind(_this2);
     _this2.attachListeners();
     return _this2;
   }
@@ -641,12 +682,7 @@ var Checkbox = /*#__PURE__*/function (_UndoableElement) {
   }, {
     key: "attachListeners",
     value: function attachListeners() {
-      this.element.addEventListener('change', this.handleChange);
-    }
-  }, {
-    key: "disposeListeners",
-    value: function disposeListeners() {
-      this.element.removeEventListener("change", this.handleChange);
+      this.addProtectedListener('change', this.handleChange);
     }
   }]);
 }(UndoableElement);
@@ -732,9 +768,6 @@ var Radio = /*#__PURE__*/function (_UndoableElement) {
       });
     }
     // TODO: What happens if the radio button does not have a group name?
-
-    // Stable reference to be used to handle changes in the listeners
-    _this2.handleChanges = _this2.handleChanges.bind(_this2);
     _this2.attachListeners();
     return _this2;
   }
@@ -765,12 +798,7 @@ var Radio = /*#__PURE__*/function (_UndoableElement) {
     key: "attachListeners",
     value: function attachListeners() {
       // On change, create a RadioAction.
-      this.element.addEventListener("change", this.handleChanges);
-    }
-  }, {
-    key: "disposeListeners",
-    value: function disposeListeners() {
-      this.element.removeEventListener("change", this.handleChanges);
+      this.addProtectedListener("change", this.handleChanges);
     }
   }]);
 }(UndoableElement);
@@ -830,8 +858,6 @@ var Range = /*#__PURE__*/function (_UndoableElement) {
     _this2 = _callSuper(this, Range, [element]);
     // Initialize a property to store the previous value.
     _this2.oldValue = element.value;
-    // Stable reference to be used to handle changes in the listeners
-    _this2.handleChanges = _this2.handleChanges.bind(_this2);
     _this2.attachListeners();
     return _this2;
   }
@@ -866,12 +892,7 @@ var Range = /*#__PURE__*/function (_UndoableElement) {
   }, {
     key: "attachListeners",
     value: function attachListeners() {
-      this.element.addEventListener("change", this.handleChanges);
-    }
-  }, {
-    key: "disposeListeners",
-    value: function disposeListeners() {
-      this.element.removeEventListener("change", this.handleChanges);
+      this.addProtectedListener("change", this.handleChanges);
     }
   }]);
 }(UndoableElement);
@@ -931,9 +952,6 @@ var DateTime = /*#__PURE__*/function (_UndoableElement) {
     _this2 = _callSuper(this, DateTime, [element]);
     // Record the initial value when the element is created.
     _this2.oldValue = element.value;
-
-    // Stable reference to be used to handle changes in the listeners
-    _this2.handleChanges = _this2.handleChanges.bind(_this2);
     _this2.attachListeners();
     return _this2;
   }
@@ -969,16 +987,7 @@ var DateTime = /*#__PURE__*/function (_UndoableElement) {
       var _this3 = this;
       // Attach the same handler to both 'input' and 'change'
       ['input', 'change'].forEach(function (type) {
-        _this3.element.addEventListener(type, _this3.handleChanges);
-      });
-    }
-  }, {
-    key: "disposeListeners",
-    value: function disposeListeners() {
-      var _this4 = this;
-      // Attach the same handler to both 'input' and 'change'
-      ['input', 'change'].forEach(function (type) {
-        _this4.element.removeEventListener(type, _this4.handleChanges);
+        _this3.addProtectedListener(type, _this3.handleChanges);
       });
     }
   }]);
@@ -1039,7 +1048,6 @@ var Select = /*#__PURE__*/function (_UndoableElement) {
     _this2 = _callSuper(this, Select, [element]);
     // Record the initial selected value.
     _this2.oldValue = element.value;
-    _this2.handleChanges = _this2.handleChanges.bind(_this2);
     _this2.attachListeners();
     return _this2;
   }
@@ -1072,12 +1080,7 @@ var Select = /*#__PURE__*/function (_UndoableElement) {
   }, {
     key: "attachListeners",
     value: function attachListeners() {
-      this.element.addEventListener("change", this.handleChanges);
-    }
-  }, {
-    key: "disposeListeners",
-    value: function disposeListeners() {
-      this.element.removeEventListener("change", this.handleChanges);
+      this.addProtectedListener("change", this.handleChanges);
     }
   }]);
 }(UndoableElement);
@@ -1137,9 +1140,6 @@ var ColorPicker = /*#__PURE__*/function (_UndoableElement) {
     _this2 = _callSuper(this, ColorPicker, [element]);
     // Record the initial color value.
     _this2.oldColor = element.value;
-
-    // Stable reference to be used to handle changes in the listeners
-    _this2.handleChanges = _this2.handleChanges.bind(_this2);
     _this2.attachListeners();
     return _this2;
   }
@@ -1172,12 +1172,7 @@ var ColorPicker = /*#__PURE__*/function (_UndoableElement) {
     key: "attachListeners",
     value: function attachListeners() {
       // Define a single handler for both 'input' and 'change' events.
-      this.element.addEventListener('change', this.handleChanges);
-    }
-  }, {
-    key: "disposeListeners",
-    value: function disposeListeners() {
-      this.element.removeEventListener('change', this.handleChanges);
+      this.addProtectedListener('change', this.handleChanges);
     }
   }]);
 }(UndoableElement);
@@ -1670,13 +1665,19 @@ function flushActiveUndoables() {
 }
 function addGlobalUndoRedoShortcuts() {
   document.addEventListener('keydown', function (event) {
-    // Check for Ctrl+Z or Cmd+Z (for Mac)
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-      event.preventDefault(); // Prevent native browser undo behavior
+    var isCtrlOrCmd = event.ctrlKey || event.metaKey;
+    if (!isCtrlOrCmd) return;
+    var key = event.key.toLowerCase();
+
+    // Ctrl+Z or Cmd+Z for Undo
+    if (!event.shiftKey && key === "z") {
+      event.preventDefault();
       undo();
+      return;
     }
-    // Check for Ctrl+Y or Cmd+Y (for Mac)
-    else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+
+    // Ctrl+Y or Cmd+Shift+Z for Redo
+    if (key === "y" || event.shiftKey && key === "z") {
       event.preventDefault();
       redo();
     }
@@ -1722,7 +1723,7 @@ function resetConfigAndReinitialize() {
   var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
   var _options$reinitialize2 = options.reinitialize,
     reinitialize = _options$reinitialize2 === void 0 ? true : _options$reinitialize2;
-  config = resetConfigToDefaults();
+  config = resetConfigToBaseline();
   if (reinitialize) {
     factoryMap = createFactoryMap(config);
     reinitializeUndoWrappers(factoryMap);
@@ -1737,30 +1738,46 @@ function resetConfigAndReinitialize() {
  * Also sets up global keyboard shortcuts for undo/redo.
  */
 function init() {
-  config = getConfig();
+  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  var _options$config = options.config,
+    userConfig = _options$config === void 0 ? {} : _options$config;
+  config = setBaselineConfig(userConfig);
   factoryMap = createFactoryMap(config);
   ensureHistoryStacks();
-  initializeUndoableWrappers(factoryMap);
-  addGlobalUndoRedoShortcuts();
-  addMouseDownListeners();
+  onDomReady(function () {
+    initializeUndoableWrappers(factoryMap);
+    addGlobalUndoRedoShortcuts();
+    addMouseDownListeners();
+  });
+  return config;
+}
+function onDomReady(fn) {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", fn, {
+      once: true
+    });
+  } else {
+    fn();
+  }
 }
 
 // Auto-initialize when DOM is ready.
 if (typeof window !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      return init();
-    });
-  } else {
-    init();
-  }
+  // TODO: Consider if auto-initialization is desired
+  // if (document.readyState === 'loading') {
+  //     document.addEventListener('DOMContentLoaded', () => init());
+  // } else {
+  //     init();
+  // }
 
   // Expose the API globally (UMD style)
   window.UndoableUI = {
+    init: init,
     undo: undo,
     redo: redo,
     updateConfig: updateConfigAndReinitialize,
-    resetConfigToDefaults: resetConfigAndReinitialize
+    resetConfig: resetConfigAndReinitialize,
+    getConfig: getConfig
   };
 }
 
