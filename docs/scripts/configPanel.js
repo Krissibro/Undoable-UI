@@ -32,8 +32,8 @@ function render(hostEl) {
         </label>
 
         <label class="cfg-field">
-          <span class="cfg-label">maxUndoStack</span>
-          <input id="cfg_maxUndoStack" type="number" min="1" step="10" />
+          <span class="cfg-label">maxHistorySize</span>
+          <input id="cfg_maxHistorySize" type="number" min="1" step="10" />
         </label>
 
         <label class="cfg-field cfg-span-2">
@@ -80,7 +80,7 @@ function syncUIFromConfig(config) {
     if (!config || typeof config !== "object") return;
 
     if ("textChunkThrottle" in config) qs("cfg_textChunkThrottle").value = String(config.textChunkThrottle ?? "");
-    if ("maxUndoStack" in config) qs("cfg_maxUndoStack").value = String(config.maxUndoStack ?? "");
+    if ("maxHistorySize" in config) qs("cfg_maxHistorySize").value = String(config.maxHistorySize ?? "");
     if ("collapseTextEdits" in config) qs("cfg_collapseTextEdits").checked = Boolean(config.collapseTextEdits);
     if ("undoRedoEventDispatchStrategy" in config) {
         qs("cfg_dispatchStrategy").value = String(config.undoRedoEventDispatchStrategy);
@@ -95,8 +95,8 @@ function readPartialFromUI() {
     const t = parseOptionalNumber(qs("cfg_textChunkThrottle").value);
     if (t !== undefined) partial.textChunkThrottle = t;
 
-    const m = parseOptionalNumber(qs("cfg_maxUndoStack").value);
-    if (m !== undefined) partial.maxUndoStack = m;
+    const m = parseOptionalNumber(qs("cfg_maxHistorySize").value);
+    if (m !== undefined) partial.maxHistorySize = m;
 
     partial.collapseTextEdits = qs("cfg_collapseTextEdits").checked;
     partial.undoRedoEventDispatchStrategy = qs("cfg_dispatchStrategy").value;
@@ -113,12 +113,12 @@ export function mountConfigPanel({ hostId }) {
     // Load current config without side effects if you eventually expose api.getConfig().
     // For now, keep your existing "reset without reinit" approach.
     try {
-        const initial = api.resetConfigToDefaults({ reinitialize: false });
+        const initial = api.getConfig();
         syncUIFromConfig(initial);
         setStatus("Loaded defaults (no reinit).");
     } catch {
         syncUIFromConfig({
-            maxUndoStack: 100,
+            maxHistorySize: 100,
             textChunkThrottle: 300,
             collapseTextEdits: false,
             undoRedoEventDispatchStrategy: "both",
@@ -138,7 +138,7 @@ export function mountConfigPanel({ hostId }) {
     qs("cfg_reset").addEventListener("click", () => {
         const reinitialize = qs("cfg_reinitialize").checked;
 
-        const reset = api.resetConfigToDefaults({ reinitialize });
+        const reset = api.resetConfig({ reinitialize });
         syncUIFromConfig(reset);
         setStatus(`Reset (${reinitialize ? "reinit" : "no reinit"}).`);
     });

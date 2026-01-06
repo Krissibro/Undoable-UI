@@ -1,6 +1,0 @@
-{
-  "textChunkThrottle": 300,
-  "maxUndoStack": 100,
-  "collapseTextEdits": false,
-  "undoRedoEventDispatchStrategy": "both"
-}
