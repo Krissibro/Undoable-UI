@@ -56,13 +56,20 @@ function flushActiveUndoables() {
 
 function addGlobalUndoRedoShortcuts() {
     document.addEventListener('keydown', function (event) {
-        // Check for Ctrl+Z or Cmd+Z (for Mac)
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-            event.preventDefault(); // Prevent native browser undo behavior
+        const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+        if ( !isCtrlOrCmd ) return;
+
+        const key = event.key.toLowerCase();
+
+        // Ctrl+Z or Cmd+Z for Undo
+        if ( !event.shiftKey && key === "z" ) {
+            event.preventDefault();
             undo();
+            return;
         }
-        // Check for Ctrl+Y or Cmd+Y (for Mac)
-        else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+
+        // Ctrl+Y or Cmd+Shift+Z for Redo
+        if ( (key === "y") || (event.shiftKey && key === "z") ) {
             event.preventDefault();
             redo();
         }
