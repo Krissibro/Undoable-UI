@@ -4,7 +4,7 @@ import { createFactoryMap } from "./undoable-elements/elementFactoryMap";
 import { ensureHistoryStacks } from "./history";
 import { initializeUndoableWrappers, reinitializeUndoWrappers } from "./undoableWrapperHandler";
 import { ensureGlobalListeners } from "./globalListeners";
-import {flushActiveUndoables} from "./commands";
+import { flushActiveUndoables, redo, undo } from "./commands";
 
 
 
@@ -47,7 +47,7 @@ function runInit() {
 
     ensureHistoryStacks();
     initializeUndoableWrappers(factoryMap);
-    ensureGlobalListeners();
+    ensureGlobalListeners({ undo, redo });
 
     _initialized = true;
     _initInProgress = false;

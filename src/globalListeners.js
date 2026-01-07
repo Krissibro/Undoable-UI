@@ -1,17 +1,16 @@
-import { redo, undo } from "./commands";
 
 
 let _hasGlobalListeners = false;
 export let isMouseDown = false;
 
-export function ensureGlobalListeners() {
-    if (_hasGlobalListeners) return;
-    addGlobalUndoRedoShortcuts();
+export function ensureGlobalListeners({ undo, redo }) {
+    if ( _hasGlobalListeners ) return;
+    addGlobalUndoRedoShortcuts({ undo, redo });
     addMouseDownListeners();
     _hasGlobalListeners = true;
 }
 
-function addGlobalUndoRedoShortcuts() {
+function addGlobalUndoRedoShortcuts({ undo, redo }) {
     document.addEventListener('keydown', function (event) {
         const isCtrlOrCmd = event.ctrlKey || event.metaKey;
         if ( !isCtrlOrCmd ) return;
