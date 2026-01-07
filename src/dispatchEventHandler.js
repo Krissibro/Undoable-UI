@@ -1,5 +1,12 @@
+/** @typedef {import("./undoable-elements/Action.js").Action} Action */
 
+/**
+ * Dispatch input/change events on elements affected by an undoable action.
+ * @param {Action} action - The undoable action containing affected elements.
+ * @param {Object} config - Configuration object specifying dispatch strategy.
+ */
 export function dispatchEvents( action, config ) {
+    if (typeof window === "undefined") return;
     const dispatchStrategy = config?.undoRedoEventDispatchStrategy;
 
     if ( !dispatchStrategy || dispatchStrategy === "none" ) return;
@@ -25,7 +32,12 @@ export function dispatchEvents( action, config ) {
     }
 }
 
+/**
+ * Emit a custom event to signal status changes in the undoable UI system.
+ * @param {Object} detail - An object containing status details.
+ */
 export function emitStatus( detail ) {
+    if (typeof window === "undefined") return;
     // detail example: { phase: "reinitializing", busy: true, reason: "updateConfig" }
     window.dispatchEvent(new CustomEvent("undoableui:status", { detail }));
 }
