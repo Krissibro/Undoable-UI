@@ -9,6 +9,7 @@ import {isHistoryReplaying} from "../historyReplayProtection";
  */
 export class UndoableElement {
     constructor(element) {
+        /** @type {HTMLElement} */
         this.element = element;
         this._listenerCleanups = [];
         this._disposed = false;
