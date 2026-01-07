@@ -170,6 +170,102 @@ function _unsupportedIterableToArray(r, a) {
   }
 }
 
+var defaultConfig = Object.freeze({
+  maxHistorySize: 100,
+  textChunkThrottle: 300,
+  collapseTextEdits: false,
+  // Dispatch native events after undo/redo so app UI updates.
+  // "none" | "input" | "change" | "both"
+  undoRedoEventDispatchStrategy: "both"
+  // TODO: future attributes
+  // debug: false,
+  // scopeStrategy: 'global', // or 'local'
+  // branchingHistory: false,
+});
+var baselineConfig = _objectSpread2({}, defaultConfig);
+var currentConfig = _objectSpread2({}, defaultConfig);
+function getConfig() {
+  return _objectSpread2({}, currentConfig);
+}
+function setBaselineConfig() {
+  var partial = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  baselineConfig = _objectSpread2(_objectSpread2({}, defaultConfig), partial);
+  currentConfig = _objectSpread2({}, baselineConfig);
+  return _objectSpread2({}, currentConfig);
+}
+
+/**
+ * Merges the provided partialConfig with the existing configuration.
+ * Any properties not specified in partialConfig will retain their current values.
+ * @param {Object} partialConfig - An object containing configuration properties to update.
+ */
+function updateConfig() {
+  var partialConfig = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  currentConfig = _objectSpread2(_objectSpread2({}, currentConfig), partialConfig);
+  return _objectSpread2({}, currentConfig);
+}
+
+/** Resets the current configuration to the default settings.
+ */
+function resetConfigToBaseline() {
+  currentConfig = _objectSpread2({}, baselineConfig);
+  return _objectSpread2({}, currentConfig);
+}
+
+/** @typedef {import("./undoable-elements/Action.js").Action} Action */
+
+/**
+ * Dispatch input/change events on elements affected by an undoable action.
+ * @param {Action} action - The undoable action containing affected elements.
+ * @param {Object} config - Configuration object specifying dispatch strategy.
+ */
+function dispatchEvents(action, config) {
+  if (typeof window === "undefined") return;
+  var dispatchStrategy = config === null || config === void 0 ? void 0 : config.undoRedoEventDispatchStrategy;
+  if (!dispatchStrategy || dispatchStrategy === "none") return;
+
+  // Check if the action has multiple affected elements
+  // Radio button groups for example
+  var targetElements = typeof action.affectedElements === "function" ? action.affectedElements() : [action.element];
+
+  // Dispatch events for each affected element
+  var _iterator = _createForOfIteratorHelper(targetElements),
+    _step;
+  try {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var element = _step.value;
+      if (!element) continue;
+      if (dispatchStrategy === "input" || dispatchStrategy === "both") {
+        element.dispatchEvent(new Event("input", {
+          bubbles: true
+        }));
+      }
+      if (dispatchStrategy === "change" || dispatchStrategy === "both") {
+        element.dispatchEvent(new Event("change", {
+          bubbles: true
+        }));
+      }
+      // TODO: Maybe add a custom undo event here?
+    }
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
+  }
+}
+
+/**
+ * Emit a custom event to signal status changes in the undoable UI system.
+ * @param {Object} detail - An object containing status details.
+ */
+function emitStatus(detail) {
+  if (typeof window === "undefined") return;
+  // detail example: { phase: "reinitializing", busy: true, reason: "updateConfig" }
+  window.dispatchEvent(new CustomEvent("undoableui:status", {
+    detail: detail
+  }));
+}
+
 var instances = new Set();
 function registerInstance(instance) {
   instances.add(instance);
@@ -209,6 +305,7 @@ function isHistoryReplaying() {
 var UndoableElement = /*#__PURE__*/function () {
   function UndoableElement(element) {
     _classCallCheck(this, UndoableElement);
+    /** @type {HTMLElement} */
     this.element = element;
     this._listenerCleanups = [];
     this._disposed = false;
@@ -299,8 +396,14 @@ var Action = /*#__PURE__*/function () {
    */
   function Action(element) {
     _classCallCheck(this, Action);
+    /** @type {HTMLElement} */
     this.element = element;
   }
+
+  /**
+   * Get all elements affected by this action.
+   * @returns {HTMLElement[]}
+   */
   return _createClass(Action, [{
     key: "affectedElements",
     value: function affectedElements() {
@@ -318,48 +421,6 @@ var Action = /*#__PURE__*/function () {
     }
   }]);
 }();
-
-var defaultConfig = Object.freeze({
-  maxHistorySize: 100,
-  textChunkThrottle: 300,
-  collapseTextEdits: false,
-  // Dispatch native events after undo/redo so app UI updates.
-  // "none" | "input" | "change" | "both"
-  undoRedoEventDispatchStrategy: "both"
-  // TODO: future attributes
-  // debug: false,
-  // scopeStrategy: 'global', // or 'local'
-  // branchingHistory: false,
-});
-var baselineConfig = _objectSpread2({}, defaultConfig);
-var currentConfig = _objectSpread2({}, defaultConfig);
-function getConfig() {
-  return currentConfig;
-}
-function setBaselineConfig() {
-  var partial = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  baselineConfig = _objectSpread2(_objectSpread2({}, defaultConfig), partial);
-  currentConfig = _objectSpread2({}, baselineConfig);
-  return currentConfig;
-}
-
-/**
- * Merges the provided partialConfig with the existing configuration.
- * Any properties not specified in partialConfig will retain their current values.
- * @param {Object} partialConfig - An object containing configuration properties to update.
- */
-function updateConfig() {
-  var partialConfig = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  currentConfig = _objectSpread2(_objectSpread2({}, currentConfig), partialConfig);
-  return currentConfig;
-}
-
-/** Resets the current configuration to the default settings.
- */
-function resetConfigToBaseline() {
-  currentConfig = _objectSpread2({}, baselineConfig);
-  return currentConfig;
-}
 
 function ensureHistoryStacks() {
   window.__GLOBAL_HISTORY__ = window.__GLOBAL_HISTORY__ || [];
@@ -392,230 +453,6 @@ function pushActionToHistory(action) {
 function pushActionToRedoStack(action) {
   window.__REDO_STACK__.push(action);
 }
-
-/**
- * Check if the element is contenteditable.
- * @param {HTMLElement} element
- * @returns {boolean}
- */
-function isContentEditable(element) {
-  return element.isContentEditable || element.getAttribute('contenteditable') === 'true';
-}
-
-/**
- * Retrieve the current text from an element, either value or innerText.
- * @param {HTMLElement} element
- * @returns {string}
- */
-function getValue(element) {
-  if (isContentEditable(element)) {
-    return element.innerText;
-  }
-  return element.value;
-}
-
-/**
- * Set the text of an element, either value or innerText.
- * @param {HTMLElement} element
- * @param {string} value
- */
-function setValue(element, value) {
-  if (isContentEditable(element)) {
-    element.innerText = value;
-  } else {
-    element.value = value;
-  }
-}
-
-var BOUNDARY_KEYS = new Set(["Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"]);
-
-/**
- * TextAction encapsulates a text change on an input/textarea/contenteditable.
- * It records the previous text and the new text.
- */
-var TextAction$1 = /*#__PURE__*/function (_Action) {
-  /**
-   * @param {HTMLElement} textElement
-   * @param {TextBox} textBoxWrapper
-   * @param {string} previousValue
-   * @param {string} newValue
-   */
-  function TextAction(textElement, textBoxWrapper, previousValue, newValue) {
-    var _this;
-    _classCallCheck(this, TextAction);
-    _this = _callSuper(this, TextAction, [textElement]);
-    _this.textBoxWrapper = textBoxWrapper;
-    _this.previousValue = previousValue;
-    _this.newValue = newValue;
-    return _this;
-  }
-  _inherits(TextAction, _Action);
-  return _createClass(TextAction, [{
-    key: "redo",
-    value: function redo() {
-      this.textBoxWrapper.previousValue = this.newValue;
-      setValue(this.element, this.newValue);
-    }
-  }, {
-    key: "undo",
-    value: function undo() {
-      this.textBoxWrapper.previousValue = this.previousValue;
-      setValue(this.element, this.previousValue);
-    }
-  }]);
-}(Action);
-
-/**
- * TextBox wraps text-like elements and groups rapid edits into "chunks".
- *
- * It uses config.textChunkThrottle (ms) to decide how long to wait after
- * the last keystroke before committing an action.
- */
-var TextBox = /*#__PURE__*/function (_UndoableElement) {
-  /**
-   * @param {HTMLElement} element
-   * @param {Object} config
-   */
-  function TextBox(element, config) {
-    var _this2;
-    _classCallCheck(this, TextBox);
-    _this2 = _callSuper(this, TextBox, [element]);
-    _this2.throttleMs = typeof config.textChunkThrottle === "number" ? config.textChunkThrottle : 0;
-
-    // Last committed value (what undo/redo considers the "current" value)
-    _this2.previousValue = getValue(_this2.element);
-
-    // Chunking state
-    _this2.chunkActive = false;
-    _this2.chunkStartValue = _this2.previousValue;
-    _this2.chunkTimerId = null;
-    _this2.attachListeners();
-    TextBox._instances.add(_this2);
-    return _this2;
-  }
-
-  /**
-   * Commit the current chunk (if any) as a TextAction in history.
-   */
-  _inherits(TextBox, _UndoableElement);
-  return _createClass(TextBox, [{
-    key: "commitChunk",
-    value: function commitChunk() {
-      if (this.chunkTimerId !== null) {
-        clearTimeout(this.chunkTimerId);
-        this.chunkTimerId = null;
-      }
-      var finalValue = getValue(this.element);
-
-      // If we never actually started a chunk but value drifted (programmatic change),
-      // fall back to a simple previous => current action.
-      if (!this.chunkActive) {
-        if (finalValue !== this.previousValue) {
-          var action = new TextAction$1(this.element, this, this.previousValue, finalValue);
-          pushActionToHistory(action);
-          this.previousValue = finalValue;
-        }
-        return;
-      }
-
-      // Chunk was active, only commit if something actually changed from the start.
-      if (finalValue !== this.chunkStartValue) {
-        var _action = new TextAction$1(this.element, this, this.chunkStartValue, finalValue);
-        pushActionToHistory(_action);
-        this.previousValue = finalValue;
-      }
-      this.chunkActive = false;
-    }
-
-    /**
-     * Called on every input event.
-     * Starts or continues a chunk and (re)schedules the commit timer.
-     */
-  }, {
-    key: "handleInputEvent",
-    value: function handleInputEvent() {
-      var _this3 = this;
-      var currentValue = getValue(this.element);
-
-      // No actual change compared to last committed value; ignore.
-      if (!this.chunkActive && currentValue === this.previousValue) {
-        return;
-      }
-
-      // First change in this chunk: remember where we started.
-      if (!this.chunkActive) {
-        this.chunkActive = true;
-        this.chunkStartValue = this.previousValue;
-      }
-
-      // If throttle is 0 or negative, commit immediately for each input.
-      if (!this.throttleMs || this.throttleMs <= 0) {
-        this.commitChunk();
-        return;
-      }
-
-      // Otherwise, debounce commits: reset the timer on each keystroke.
-      if (this.chunkTimerId !== null) {
-        clearTimeout(this.chunkTimerId);
-      }
-      // Set new timer to commit chunk
-      this.chunkTimerId = setTimeout(function () {
-        _this3.commitChunk();
-      }, this.throttleMs);
-    }
-  }, {
-    key: "handleBoundaryKeyEvent",
-    value: function handleBoundaryKeyEvent(event) {
-      if (BOUNDARY_KEYS.has(event.key)) {
-        this.commitChunk();
-      }
-    }
-
-    /**
-     * Attach listeners for input/change/blur.
-     * We record every change via input, but only push an action when:
-     *  - the throttle timer fires, or
-     *  - the element blurs / change event fires.
-     */
-  }, {
-    key: "attachListeners",
-    value: function attachListeners() {
-      this.addProtectedListener("input", this.handleInputEvent);
-      this.addProtectedListener("keydown", this.handleBoundaryKeyEvent);
-      this.addProtectedListener("pointerdown", this.commitChunk);
-      // On blur or change, force a commit of any pending chunk.
-      this.addProtectedListener("blur", this.commitChunk);
-      this.addProtectedListener("change", this.commitChunk);
-    }
-  }, {
-    key: "extraSubclassCleanup",
-    value: function extraSubclassCleanup() {
-      // Clear pending timer so it can't fire after dispose
-      if (this.chunkTimerId !== null) {
-        clearTimeout(this.chunkTimerId);
-        this.chunkTimerId = null;
-      }
-      TextBox._instances["delete"](this);
-    }
-  }], [{
-    key: "flushAll",
-    value: function flushAll() {
-      var _iterator = _createForOfIteratorHelper(TextBox._instances),
-        _step;
-      try {
-        for (_iterator.s(); !(_step = _iterator.n()).done;) {
-          var textbox = _step.value;
-          textbox.commitChunk();
-        }
-      } catch (err) {
-        _iterator.e(err);
-      } finally {
-        _iterator.f();
-      }
-    }
-  }]);
-}(UndoableElement);
-_defineProperty(TextBox, "_instances", new Set());
 
 /**
  * CheckboxCommand encapsulates a toggle action on a checkbox.
@@ -1174,6 +1011,230 @@ var ColorPicker = /*#__PURE__*/function (_UndoableElement) {
 }(UndoableElement);
 
 /**
+ * Check if the element is contenteditable.
+ * @param {HTMLElement} element
+ * @returns {boolean}
+ */
+function isContentEditable(element) {
+  return element.isContentEditable || element.getAttribute('contenteditable') === 'true';
+}
+
+/**
+ * Retrieve the current text from an element, either value or innerText.
+ * @param {HTMLElement} element
+ * @returns {string}
+ */
+function getValue(element) {
+  if (isContentEditable(element)) {
+    return element.innerText;
+  }
+  return element.value;
+}
+
+/**
+ * Set the text of an element, either value or innerText.
+ * @param {HTMLElement} element
+ * @param {string} value
+ */
+function setValue(element, value) {
+  if (isContentEditable(element)) {
+    element.innerText = value;
+  } else {
+    element.value = value;
+  }
+}
+
+var BOUNDARY_KEYS = new Set(["Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"]);
+
+/**
+ * TextAction encapsulates a text change on an input/textarea/contenteditable.
+ * It records the previous text and the new text.
+ */
+var TextAction$1 = /*#__PURE__*/function (_Action) {
+  /**
+   * @param {HTMLElement} textElement
+   * @param {TextBox} textBoxWrapper
+   * @param {string} previousValue
+   * @param {string} newValue
+   */
+  function TextAction(textElement, textBoxWrapper, previousValue, newValue) {
+    var _this;
+    _classCallCheck(this, TextAction);
+    _this = _callSuper(this, TextAction, [textElement]);
+    _this.textBoxWrapper = textBoxWrapper;
+    _this.previousValue = previousValue;
+    _this.newValue = newValue;
+    return _this;
+  }
+  _inherits(TextAction, _Action);
+  return _createClass(TextAction, [{
+    key: "redo",
+    value: function redo() {
+      this.textBoxWrapper.previousValue = this.newValue;
+      setValue(this.element, this.newValue);
+    }
+  }, {
+    key: "undo",
+    value: function undo() {
+      this.textBoxWrapper.previousValue = this.previousValue;
+      setValue(this.element, this.previousValue);
+    }
+  }]);
+}(Action);
+
+/**
+ * TextBox wraps text-like elements and groups rapid edits into "chunks".
+ *
+ * It uses config.textChunkThrottle (ms) to decide how long to wait after
+ * the last keystroke before committing an action.
+ */
+var TextBox = /*#__PURE__*/function (_UndoableElement) {
+  /**
+   * @param {HTMLElement} element
+   * @param {Object} config
+   */
+  function TextBox(element, config) {
+    var _this2;
+    _classCallCheck(this, TextBox);
+    _this2 = _callSuper(this, TextBox, [element]);
+    _this2.throttleMs = typeof config.textChunkThrottle === "number" ? config.textChunkThrottle : 0;
+
+    // Last committed value (what undo/redo considers the "current" value)
+    _this2.previousValue = getValue(_this2.element);
+
+    // Chunking state
+    _this2.chunkActive = false;
+    _this2.chunkStartValue = _this2.previousValue;
+    _this2.chunkTimerId = null;
+    _this2.attachListeners();
+    TextBox._instances.add(_this2);
+    return _this2;
+  }
+
+  /**
+   * Commit the current chunk (if any) as a TextAction in history.
+   */
+  _inherits(TextBox, _UndoableElement);
+  return _createClass(TextBox, [{
+    key: "commitChunk",
+    value: function commitChunk() {
+      if (this.chunkTimerId !== null) {
+        clearTimeout(this.chunkTimerId);
+        this.chunkTimerId = null;
+      }
+      var finalValue = getValue(this.element);
+
+      // If we never actually started a chunk but value drifted (programmatic change),
+      // fall back to a simple previous => current action.
+      if (!this.chunkActive) {
+        if (finalValue !== this.previousValue) {
+          var action = new TextAction$1(this.element, this, this.previousValue, finalValue);
+          pushActionToHistory(action);
+          this.previousValue = finalValue;
+        }
+        return;
+      }
+
+      // Chunk was active, only commit if something actually changed from the start.
+      if (finalValue !== this.chunkStartValue) {
+        var _action = new TextAction$1(this.element, this, this.chunkStartValue, finalValue);
+        pushActionToHistory(_action);
+        this.previousValue = finalValue;
+      }
+      this.chunkActive = false;
+    }
+
+    /**
+     * Called on every input event.
+     * Starts or continues a chunk and (re)schedules the commit timer.
+     */
+  }, {
+    key: "handleInputEvent",
+    value: function handleInputEvent() {
+      var _this3 = this;
+      var currentValue = getValue(this.element);
+
+      // No actual change compared to last committed value; ignore.
+      if (!this.chunkActive && currentValue === this.previousValue) {
+        return;
+      }
+
+      // First change in this chunk: remember where we started.
+      if (!this.chunkActive) {
+        this.chunkActive = true;
+        this.chunkStartValue = this.previousValue;
+      }
+
+      // If throttle is 0 or negative, commit immediately for each input.
+      if (!this.throttleMs || this.throttleMs <= 0) {
+        this.commitChunk();
+        return;
+      }
+
+      // Otherwise, debounce commits: reset the timer on each keystroke.
+      if (this.chunkTimerId !== null) {
+        clearTimeout(this.chunkTimerId);
+      }
+      // Set new timer to commit chunk
+      this.chunkTimerId = setTimeout(function () {
+        _this3.commitChunk();
+      }, this.throttleMs);
+    }
+  }, {
+    key: "handleBoundaryKeyEvent",
+    value: function handleBoundaryKeyEvent(event) {
+      if (BOUNDARY_KEYS.has(event.key)) {
+        this.commitChunk();
+      }
+    }
+
+    /**
+     * Attach listeners for input/change/blur.
+     * We record every change via input, but only push an action when:
+     *  - the throttle timer fires, or
+     *  - the element blurs / change event fires.
+     */
+  }, {
+    key: "attachListeners",
+    value: function attachListeners() {
+      this.addProtectedListener("input", this.handleInputEvent);
+      this.addProtectedListener("keydown", this.handleBoundaryKeyEvent);
+      this.addProtectedListener("pointerdown", this.commitChunk);
+      // On blur or change, force a commit of any pending chunk.
+      this.addProtectedListener("blur", this.commitChunk);
+      this.addProtectedListener("change", this.commitChunk);
+    }
+  }, {
+    key: "extraSubclassCleanup",
+    value: function extraSubclassCleanup() {
+      // Clear pending timer so it can't fire after dispose
+      if (this.chunkTimerId !== null) {
+        clearTimeout(this.chunkTimerId);
+        this.chunkTimerId = null;
+      }
+      TextBox._instances["delete"](this);
+    }
+  }], [{
+    key: "flushAll",
+    value: function flushAll() {
+      var _iterator = _createForOfIteratorHelper(TextBox._instances),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var textbox = _step.value;
+          textbox.commitChunk();
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+    }
+  }]);
+}(UndoableElement);
+_defineProperty(TextBox, "_instances", new Set());
+
+/**
  * Time window (ms) to merge consecutive keystrokes into a single chunk
  */
 var CHUNK_MERGE_DELAY = 500;
@@ -1473,40 +1534,6 @@ function buildCandidateElementSelectors(factoryMap) {
   }).join(", ").replace(/\s+/g, " ").trim();
 }
 
-function dispatchEvents(action, config) {
-  var dispatchStrategy = config === null || config === void 0 ? void 0 : config.undoRedoEventDispatchStrategy;
-  if (!dispatchStrategy || dispatchStrategy === "none") return;
-
-  // Check if the action has multiple affected elements
-  // Radio button groups for example
-  var targetElements = typeof action.affectedElements === "function" ? action.affectedElements() : [action.element];
-
-  // Dispatch events for each affected element
-  var _iterator = _createForOfIteratorHelper(targetElements),
-    _step;
-  try {
-    for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      var element = _step.value;
-      if (!element) continue;
-      if (dispatchStrategy === "input" || dispatchStrategy === "both") {
-        element.dispatchEvent(new Event("input", {
-          bubbles: true
-        }));
-      }
-      if (dispatchStrategy === "change" || dispatchStrategy === "both") {
-        element.dispatchEvent(new Event("change", {
-          bubbles: true
-        }));
-      }
-      // TODO: Maybe add a custom undo event here?
-    }
-  } catch (err) {
-    _iterator.e(err);
-  } finally {
-    _iterator.f();
-  }
-}
-
 var mutationObserver = null;
 
 /**
@@ -1516,8 +1543,7 @@ var mutationObserver = null;
  */
 function initializeUndoableWrappers(factoryMap) {
   scanForAndWrapUndoableElements(document, factoryMap);
-  if (mutationObserver) mutationObserver.disconnect();
-  mutationObserver = createMutationObserver(factoryMap);
+  resetObserver(factoryMap);
 }
 
 /**
@@ -1529,6 +1555,14 @@ function initializeUndoableWrappers(factoryMap) {
 function reinitializeUndoWrappers(factoryMap) {
   disposeAllUndoables();
   scanForAndWrapUndoableElements(document, factoryMap);
+  resetObserver(factoryMap);
+}
+
+/**
+ * Resets the MutationObserver with a new one based on the provided factoryMap.
+ * @param factoryMap
+ */
+function resetObserver(factoryMap) {
   if (mutationObserver) mutationObserver.disconnect();
   mutationObserver = createMutationObserver(factoryMap);
 }
@@ -1540,6 +1574,7 @@ function reinitializeUndoWrappers(factoryMap) {
  * Scan the DOM for undoable elements based of a root node
  * and wrap them with their respective undoable handlers.
  * @param {HTMLElement|Document} root - The root element to start scanning from.
+ * @param factoryMap
  * @return {void}
  */
 function scanForAndWrapUndoableElements(root, factoryMap) {
@@ -1616,50 +1651,21 @@ function createMutationObserver(factoryMap) {
   return observer;
 }
 
-// src/index.js
-var config;
-var factoryMap;
-window.isMouseDown = false;
-
-/**
- * Global undo function: undoes the most recent action.
- */
-function undo() {
-  flushActiveUndoables();
-  if (window.__GLOBAL_HISTORY__.length > 0) {
-    var action = window.__GLOBAL_HISTORY__.pop();
-    activateHistoryReplayProtection(function () {
-      action.undo();
-      dispatchEvents(action, config);
-    });
-    pushActionToRedoStack(action);
-  }
+var _hasGlobalListeners = false;
+function ensureGlobalListeners(_ref) {
+  var undo = _ref.undo,
+    redo = _ref.redo;
+  if (_hasGlobalListeners) return;
+  addGlobalUndoRedoShortcuts({
+    undo: undo,
+    redo: redo
+  });
+  addMouseDownListeners();
+  _hasGlobalListeners = true;
 }
-
-/**
- * Global redo function: re-executes the most recently undone action.
- */
-function redo() {
-  flushActiveUndoables();
-  if (window.__REDO_STACK__.length > 0) {
-    var action = window.__REDO_STACK__.pop();
-    activateHistoryReplayProtection(function () {
-      action.redo();
-      dispatchEvents(action, config);
-    });
-    pushActionToHistory(action, {
-      clearRedo: false
-    });
-  }
-}
-
-// Make sure any in-progress edits are finalized. (Before the throttle time is up for example)
-function flushActiveUndoables() {
-  if (typeof TextBox.flushAll === 'function') {
-    TextBox.flushAll();
-  }
-}
-function addGlobalUndoRedoShortcuts() {
+function addGlobalUndoRedoShortcuts(_ref2) {
+  var undo = _ref2.undo,
+    redo = _ref2.redo;
   document.addEventListener('keydown', function (event) {
     var isCtrlOrCmd = event.ctrlKey || event.metaKey;
     if (!isCtrlOrCmd) return;
@@ -1684,98 +1690,227 @@ function addGlobalUndoRedoShortcuts() {
 // For the color picker for example, check if mouse is down to avoid capturing intermediate states
 function addMouseDownListeners() {
   document.addEventListener('mousedown', function () {
-    return window.isMouseDown = true;
+    return true;
   });
   document.addEventListener('mouseup', function () {
-    return window.isMouseDown = false;
+    return false;
   });
 }
 
 /**
- * Updates config and optionally reinitializes wrappers.
- * @param {object} partialConfig
- * @param {{ reinitialize?: boolean }} [options]
- * @returns {object} updated config
+ * Global undo function: undoes the most recent action.
  */
-function updateConfigAndReinitialize() {
-  var partialConfig = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-  var _options$reinitialize = options.reinitialize,
-    reinitialize = _options$reinitialize === void 0 ? true : _options$reinitialize;
-  config = updateConfig(partialConfig);
-  if (reinitialize) {
-    factoryMap = createFactoryMap(config);
-    reinitializeUndoWrappers(factoryMap);
+function undo() {
+  ensureHistoryStacks();
+  flushActiveUndoables();
+  if (window.__GLOBAL_HISTORY__.length > 0) {
+    var action = window.__GLOBAL_HISTORY__.pop();
+    activateHistoryReplayProtection(function () {
+      action.undo();
+      dispatchEvents(action, getConfig());
+    });
+    pushActionToRedoStack(action);
   }
-  return config;
 }
 
 /**
- * Resets config and optionally reinitializes wrappers.
- * @param {{ reinitialize?: boolean }} [options]
- * @returns {object} reset config
+ * Global redo function: re-executes the most recently undone action.
  */
-function resetConfigAndReinitialize() {
-  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  var _options$reinitialize2 = options.reinitialize,
-    reinitialize = _options$reinitialize2 === void 0 ? true : _options$reinitialize2;
-  config = resetConfigToBaseline();
-  if (reinitialize) {
-    factoryMap = createFactoryMap(config);
-    reinitializeUndoWrappers(factoryMap);
+function redo() {
+  ensureHistoryStacks();
+  flushActiveUndoables();
+  if (window.__REDO_STACK__.length > 0) {
+    var action = window.__REDO_STACK__.pop();
+    activateHistoryReplayProtection(function () {
+      action.redo();
+      dispatchEvents(action, getConfig());
+    });
+    pushActionToHistory(action, {
+      clearRedo: false
+    });
   }
-  return config;
+}
+
+// Make sure any in-progress edits are finalized. (Before the throttle time is up for example)
+function flushActiveUndoables() {
+  if (typeof TextBox.flushAll === 'function') {
+    TextBox.flushAll();
+  }
+}
+
+var factoryMap = null;
+var _initialized = false;
+
+//init coordination
+var _initScheduled = false;
+var _initInProgress = false;
+var _pendingBaselineConfig = null; // last init({config}) before init actually runs
+
+// reinit coordination (coalescing)
+var _reinitInProgress = false;
+var _reinitScheduled = false;
+var _reinitQueued = false;
+// For when reinit is requested multiple times in succession. Last config matters.
+var _latestReinitInReason = null;
+function runInit() {
+  if (_initialized || _initInProgress) return;
+  _initInProgress = true;
+  _initScheduled = false;
+  emitStatus({
+    phase: "initializing",
+    busy: true,
+    reason: "init"
+  });
+  var baselineFromInit = _pendingBaselineConfig || {};
+  _pendingBaselineConfig = null;
+  var config = setBaselineConfig(baselineFromInit);
+  factoryMap = createFactoryMap(config);
+  ensureHistoryStacks();
+  initializeUndoableWrappers(factoryMap);
+  ensureGlobalListeners({
+    undo: undo,
+    redo: redo
+  });
+  _initialized = true;
+  _initInProgress = false;
+  _initScheduled = false;
+  emitStatus({
+    phase: "ready",
+    busy: false,
+    reason: "init"
+  });
+}
+function scheduleInitIfNeeded() {
+  if (_initialized || _initInProgress || _initScheduled) return;
+  _initScheduled = true;
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", runInit, {
+      once: true
+    });
+  } else {
+    // DOM already ready: run immediately (fixes the “init no-op” bug)
+    runInit();
+  }
+}
+function requestReinit(reason) {
+  _latestReinitInReason = reason || "reinit";
+  if (_reinitInProgress) {
+    _reinitQueued = true;
+    return;
+  }
+  if (_reinitScheduled) return;
+  _reinitScheduled = true;
+  emitStatus({
+    phase: "reinitializing",
+    busy: true,
+    reason: _latestReinitInReason
+  });
+
+  // queueMicrotaskFn(runReinit);
+  setTimeout(runReinit, 0);
+}
+function runReinit() {
+  _reinitScheduled = false;
+  if (!_initialized) return; // init not done yet
+  if (_reinitInProgress) return;
+  _reinitInProgress = true;
+  var reason = _latestReinitInReason;
+  try {
+    // emitStatus({ phase: "reinitializing", busy: true, reason });
+    // Commit pending chunks before disposing wrappers
+    flushActiveUndoables();
+    // Latest config wins
+    factoryMap = createFactoryMap(getConfig());
+    reinitializeUndoWrappers(factoryMap);
+
+    // emitStatus({ phase: "ready", busy: false, reason });
+  } finally {
+    // Check if another reinit was queued during this one
+    _reinitInProgress = false;
+    emitStatus({
+      phase: "ready",
+      busy: false,
+      reason: reason
+    });
+    if (_reinitQueued) {
+      _reinitQueued = false;
+      requestReinit("queued");
+    }
+  }
 }
 
 /**
+ * Public: init()
  * Initialization function.
  * Scans the DOM for undoable elements and attaches their handlers.
  * Sets up mutation observers to handle dynamically added elements.
  * Also sets up global keyboard shortcuts for undo/redo.
+ * Safe to call multiple times; initialization only happens once.
+ * Last init({config}) wins if called multiple times before init completes.
+ * @param options
+ * @returns {null}
  */
 function init() {
   var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
   var _options$config = options.config,
     userConfig = _options$config === void 0 ? {} : _options$config;
-  config = setBaselineConfig(userConfig);
-  factoryMap = createFactoryMap(config);
-  ensureHistoryStacks();
-  onDomReady(function () {
-    initializeUndoableWrappers(factoryMap);
-    addGlobalUndoRedoShortcuts();
-    addMouseDownListeners();
-  });
-  return config;
-}
-function onDomReady(fn) {
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", fn, {
-      once: true
-    });
-  } else {
-    fn();
-  }
+  if (_initialized) return getConfig();
+  // last init config wins
+  _pendingBaselineConfig = userConfig;
+  scheduleInitIfNeeded();
+  return getConfig();
 }
 
-// Auto-initialize when DOM is ready.
+/**
+ * Public: updateConfigAndReinitialize()
+ * Updates config and optionally reinitializes wrappers.
+ * @param {object} partialConfig
+ * @param {{ reinitialize?: boolean }} [options]
+ * @returns {object} updated config
+ */
+function updateConfigAndReinit() {
+  var partialConfig = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  if (!_initialized) return null;
+  var _options$reinitialize = options.reinitialize,
+    reinitialize = _options$reinitialize === void 0 ? true : _options$reinitialize;
+  var config = updateConfig(partialConfig);
+  if (reinitialize) {
+    requestReinit("updateConfig");
+  }
+  return config;
+}
+
+/**
+ * Public: resetConfigAndReinitialize()
+ * Resets config and optionally reinitializes wrappers.
+ * @param {{ reinitialize?: boolean }} [options]
+ * @returns {object} reset config
+ */
+function resetConfigAndReinit() {
+  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  if (!_initialized) return null;
+  var _options$reinitialize2 = options.reinitialize,
+    reinitialize = _options$reinitialize2 === void 0 ? true : _options$reinitialize2;
+  var config = resetConfigToBaseline();
+  if (reinitialize) {
+    requestReinit("resetConfig");
+  }
+  return config;
+}
+
+// src/index.js
 if (typeof window !== 'undefined') {
   // TODO: Consider if auto-initialization is desired
-  // if (document.readyState === 'loading') {
-  //     document.addEventListener('DOMContentLoaded', () => init());
-  // } else {
-  //     init();
-  // }
 
   // Expose the API globally (UMD style)
   window.UndoableUI = {
     init: init,
     undo: undo,
     redo: redo,
-    updateConfig: updateConfigAndReinitialize,
-    resetConfig: resetConfigAndReinitialize,
+    updateConfig: updateConfigAndReinit,
+    resetConfig: resetConfigAndReinit,
     getConfig: getConfig
   };
 }
-
-export { init, redo, resetConfigAndReinitialize, undo, updateConfigAndReinitialize };
 //# sourceMappingURL=undoable-ui.esm.js.map
