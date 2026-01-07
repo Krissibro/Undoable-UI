@@ -4,6 +4,25 @@ import { mountAddSquaresController } from "./addSquaresController.js";
 import { mountConfigPanel } from "./configPanel.js";
 
 onReady(() => {
+    // Attach status listener FIRST, so we don't miss init/reinit events
+    window.addEventListener("undoableui:status", (e) => {
+        const { phase, busy } = e.detail || {};
+        document.body.dataset.undoableuiBusy = busy ? "1" : "0";
+        document.body.dataset.undoableuiPhase = phase || "";
+    });
+
+    // Now init the library (emits status events)
+    if (window.UndoableUI?.init) {
+        window.UndoableUI.init({
+            config: {
+                maxHistorySize: 100,
+                textChunkThrottle: 300,
+            },
+        });
+    } else {
+        console.warn("window.UndoableUI not found. Is dist/undoable-ui.umd.js loading correctly?");
+    }
+
     initColorValueMirror({
         inputId: "color1",
         outputId: "color1Value",

@@ -42,6 +42,7 @@ function resetObserver(factoryMap) {
  * Scan the DOM for undoable elements based of a root node
  * and wrap them with their respective undoable handlers.
  * @param {HTMLElement|Document} root - The root element to start scanning from.
+ * @param factoryMap
  * @return {void}
  */
 export function scanForAndWrapUndoableElements(root, factoryMap) {

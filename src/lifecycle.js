@@ -78,7 +78,10 @@ function requestReinit(reason) {
     if (_reinitScheduled) return;
     _reinitScheduled = true;
 
-    queueMicrotaskFn(runReinit);
+    emitStatus({ phase: "reinitializing", busy: true, reason: _latestReinitInReason });
+
+    // queueMicrotaskFn(runReinit);
+    setTimeout(runReinit, 0)
 }
 
 function runReinit() {
@@ -90,17 +93,19 @@ function runReinit() {
 
     const reason = _latestReinitInReason;
     try {
-        emitStatus({ phase: "reinitializing", busy: true, reason });
+        // emitStatus({ phase: "reinitializing", busy: true, reason });
         // Commit pending chunks before disposing wrappers
         flushActiveUndoables();
         // Latest config wins
         factoryMap = createFactoryMap(getConfig());
         reinitializeUndoWrappers(factoryMap);
 
-        emitStatus({ phase: "ready", busy: false, reason });
+        // emitStatus({ phase: "ready", busy: false, reason });
     } finally {
         // Check if another reinit was queued during this one
         _reinitInProgress = false;
+
+        emitStatus({ phase: "ready", busy: false, reason });
         if (_reinitQueued) {
             _reinitQueued = false;
             requestReinit("queued");
