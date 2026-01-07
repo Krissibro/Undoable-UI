@@ -25,11 +25,12 @@ let _reinitQueued = false;
 let _latestReinitInReason = null;
 
 
+// TODO: leaving it here for now, but could just use setTimeout as is
 // queueMicrotask fallback
-const queueMicrotaskFn =
-    (typeof queueMicrotask === "function")
-        ? queueMicrotask
-        : (fn) => Promise.resolve().then(fn);
+// const queueMicrotaskFn =
+//     (typeof queueMicrotask === "function")
+//         ? queueMicrotask
+//         : (fn) => Promise.resolve().then(fn);
 
 
 function runInit() {
