@@ -10,6 +10,7 @@ import { initializeUndoableWrappers, reinitializeUndoWrappers } from "./undoable
 let config;
 let factoryMap;
 window.isMouseDown = false;
+let _hasGlobalListeners = false;
 
 /**
  * Global undo function: undoes the most recent action.
@@ -81,6 +82,13 @@ function addGlobalUndoRedoShortcuts() {
 function addMouseDownListeners() {
     document.addEventListener('mousedown', () => window.isMouseDown = true);
     document.addEventListener('mouseup',   () => window.isMouseDown = false);
+}
+
+function ensureGlobalListeners() {
+    if (_hasGlobalListeners) return;
+    addGlobalUndoRedoShortcuts();
+    addMouseDownListeners();
+    _hasGlobalListeners = true;
 }
 
 /**
