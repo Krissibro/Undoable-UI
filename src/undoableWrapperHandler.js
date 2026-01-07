@@ -11,8 +11,7 @@ let mutationObserver = null;
  */
 export function initializeUndoableWrappers(factoryMap) {
     scanForAndWrapUndoableElements(document, factoryMap);
-    if (mutationObserver) mutationObserver.disconnect();
-    mutationObserver = createMutationObserver(factoryMap);
+    resetObserver(factoryMap);
 }
 
 /**
@@ -21,9 +20,17 @@ export function initializeUndoableWrappers(factoryMap) {
  * Then sets up a new MutationObserver.
  * @param factoryMap
  */
-export function reinitializeUndoWrappers (factoryMap) {
+export function reinitializeUndoWrappers(factoryMap) {
     disposeAllUndoables();
     scanForAndWrapUndoableElements(document, factoryMap);
+    resetObserver(factoryMap);
+}
+
+/**
+ * Resets the MutationObserver with a new one based on the provided factoryMap.
+ * @param factoryMap
+ */
+function resetObserver(factoryMap) {
     if (mutationObserver) mutationObserver.disconnect();
     mutationObserver = createMutationObserver(factoryMap);
 }
