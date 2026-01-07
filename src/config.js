@@ -24,7 +24,7 @@ export function getConfig() {
 export function setBaselineConfig(partial = {}) {
     baselineConfig = { ...defaultConfig, ...partial };
     currentConfig  = { ...baselineConfig };
-    return currentConfig;
+    return { ...currentConfig };
 }
 
 /**
@@ -34,12 +34,12 @@ export function setBaselineConfig(partial = {}) {
  */
 export function updateConfig(partialConfig = {}) {
     currentConfig = { ...currentConfig, ...partialConfig };
-    return currentConfig;
+    return { ...currentConfig };
 }
 
 /** Resets the current configuration to the default settings.
  */
 export function resetConfigToBaseline() {
     currentConfig = { ...baselineConfig };
-    return currentConfig;
+    return { ...currentConfig };
 }
