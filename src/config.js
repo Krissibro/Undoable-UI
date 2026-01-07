@@ -18,7 +18,7 @@ let currentConfig = { ...defaultConfig };
 
 
 export function getConfig() {
-    return currentConfig;
+    return { ...currentConfig };
 }
 
 export function setBaselineConfig(partial = {}) {
