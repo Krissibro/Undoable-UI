@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { ensureHistoryStacks, getHistoryStack } from "../../src/history.js";
-import { TextBox } from "../../src/undoable-elements/elements/TextBox.js";
+import { ensureHistoryStacks, getHistoryStack } from "../../../src/history.js";
+import { TextBox } from "../../../src/undoable-elements/elements/TextBox.js";
 
 
 describe("TextBox", () => {

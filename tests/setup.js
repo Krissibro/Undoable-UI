@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, vi } from "vitest";
+import { disposeAllUndoables } from "../src/undoable-elements/elementRegistry";
 
 // Helper: clean history stacks every test
 function resetHistory() {
@@ -10,6 +11,7 @@ beforeEach(() => {
     document.body.innerHTML = "";
     resetHistory();
     vi.useRealTimers();
+    disposeAllUndoables();
 });
 
 afterEach(() => {
