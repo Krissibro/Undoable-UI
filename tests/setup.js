@@ -27,4 +27,5 @@ afterEach(() => {
 
     // Double-tap cleanup in case a test registered instances late
     disposeAllUndoables();
+    vi.useRealTimers();
 });

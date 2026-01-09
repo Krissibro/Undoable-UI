@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { ensureHistoryStacks, getHistoryStack } from "../../../src/history.js";
 import { TextBox } from "../../../src/undoable-elements/elements/TextBox.js";
 
-
 describe("TextBox", () => {
     it("debounces into one action after throttle", () => {
         vi.useFakeTimers();
@@ -15,7 +14,6 @@ describe("TextBox", () => {
 
         new TextBox(input, { textChunkThrottle: 300 });
 
-        // simulate typing: a -> ab -> abc
         input.value = "ab";
         input.dispatchEvent(new Event("input", { bubbles: true }));
 
@@ -31,7 +29,6 @@ describe("TextBox", () => {
         expect(action.previousValue).toBe("a");
         expect(action.newValue).toBe("abc");
 
-        // undo/redo work
         action.undo();
         expect(input.value).toBe("a");
         action.redo();
@@ -52,7 +49,9 @@ describe("TextBox", () => {
         input.value = "hello!";
         input.dispatchEvent(new Event("input", { bubbles: true }));
 
-        input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+        input.dispatchEvent(
+            new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
+        );
 
         expect(getHistoryStack().length).toBe(1);
         expect(getHistoryStack()[0].previousValue).toBe("hello");
@@ -81,5 +80,29 @@ describe("TextBox", () => {
 
         TextBox.flushAll();
         expect(getHistoryStack().length).toBe(2);
+    });
+
+    it("dispose removes instance from global flushing behavior", () => {
+        vi.useFakeTimers();
+        ensureHistoryStacks();
+        window.__GLOBAL_HISTORY__.length = 0;
+        window.__REDO_STACK__.length = 0;
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = "a";
+        document.body.appendChild(input);
+
+        const tb = new TextBox(input, { textChunkThrottle: 9999 });
+
+        input.value = "ab";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+
+        // Now dispose before flushing
+        tb.dispose();
+
+        // Should not throw and should not commit anything from the disposed instance
+        expect(() => TextBox.flushAll()).not.toThrow();
+        expect(getHistoryStack()).toHaveLength(0);
     });
 });
