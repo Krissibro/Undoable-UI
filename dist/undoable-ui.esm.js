@@ -3,6 +3,9 @@ function _arrayLikeToArray(r, a) {
   for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
   return n;
 }
+function _arrayWithHoles(r) {
+  if (Array.isArray(r)) return r;
+}
 function _arrayWithoutHoles(r) {
   if (Array.isArray(r)) return _arrayLikeToArray(r);
 }
@@ -111,6 +114,36 @@ function _isNativeReflectConstruct() {
 function _iterableToArray(r) {
   if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
 }
+function _iterableToArrayLimit(r, l) {
+  var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+  if (null != t) {
+    var e,
+      n,
+      i,
+      u,
+      a = [],
+      f = !0,
+      o = !1;
+    try {
+      if (i = (t = t.call(r)).next, 0 === l) {
+        if (Object(t) !== t) return;
+        f = !1;
+      } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
+    } catch (r) {
+      o = !0, n = r;
+    } finally {
+      try {
+        if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
+      } finally {
+        if (o) throw n;
+      }
+    }
+    return a;
+  }
+}
+function _nonIterableRest() {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+}
 function _nonIterableSpread() {
   throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
 }
@@ -144,6 +177,9 @@ function _setPrototypeOf(t, e) {
   return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) {
     return t.__proto__ = e, t;
   }, _setPrototypeOf(t, e);
+}
+function _slicedToArray(r, e) {
+  return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
 }
 function _toConsumableArray(r) {
   return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread();
@@ -184,14 +220,17 @@ var defaultConfig = Object.freeze({
 });
 var baselineConfig = _objectSpread2({}, defaultConfig);
 var currentConfig = _objectSpread2({}, defaultConfig);
+var allowedKeys = new Set(["maxHistorySize", "textChunkThrottle", "collapseTextEdits", "undoRedoEventDispatchStrategy"]);
+var allowedDispatch = new Set(["none", "input", "change", "both"]);
 function getConfig() {
   return _objectSpread2({}, currentConfig);
 }
 function setBaselineConfig() {
-  var partial = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  baselineConfig = _objectSpread2(_objectSpread2({}, defaultConfig), partial);
+  var partialBaseline = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  var normalizedConfig = normalizeConfig(partialBaseline, defaultConfig);
+  baselineConfig = _objectSpread2(_objectSpread2({}, defaultConfig), normalizedConfig);
   currentConfig = _objectSpread2({}, baselineConfig);
-  return _objectSpread2({}, currentConfig);
+  return getConfig();
 }
 
 /**
@@ -201,8 +240,9 @@ function setBaselineConfig() {
  */
 function updateConfig() {
   var partialConfig = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  currentConfig = _objectSpread2(_objectSpread2({}, currentConfig), partialConfig);
-  return _objectSpread2({}, currentConfig);
+  var normalizedConfig = normalizeConfig(partialConfig, currentConfig);
+  currentConfig = _objectSpread2(_objectSpread2({}, currentConfig), normalizedConfig);
+  return getConfig();
 }
 
 /** Resets the current configuration to the default settings.
@@ -210,6 +250,84 @@ function updateConfig() {
 function resetConfigToBaseline() {
   currentConfig = _objectSpread2({}, baselineConfig);
   return _objectSpread2({}, currentConfig);
+}
+
+// ---------- normalization helpers ----------
+
+function toFiniteNumber(x) {
+  if (typeof x === "number") return Number.isFinite(x) ? x : null;
+  if (typeof x === "string") {
+    var s = x.trim();
+    if (s === "") return null;
+    var n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+function normalizeConfig() {
+  var partial = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  var out = {};
+
+  // Keep only known keys (typos get ignored)
+  for (var _i = 0, _Object$entries = Object.entries(partial); _i < _Object$entries.length; _i++) {
+    var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+      k = _Object$entries$_i[0],
+      v = _Object$entries$_i[1];
+    if (!allowedKeys.has(k)) continue;
+    out[k] = v;
+  }
+
+  // maxHistorySize: must be a finite int >= 1 (0/negative/nonsense ignored)
+  if ("maxHistorySize" in out) {
+    var n = toFiniteNumber(out.maxHistorySize);
+    if (n === null) {
+      delete out.maxHistorySize;
+    } else {
+      var _int = Math.trunc(n);
+      if (_int < 1) {
+        delete out.maxHistorySize;
+      } else {
+        // optional ceiling to avoid absurd memory
+        out.maxHistorySize = Math.min(_int, 10000);
+      }
+    }
+  }
+
+  // textChunkThrottle: must be finite int >= 0 (negative/nonsense ignored)
+  if ("textChunkThrottle" in out) {
+    var _n = toFiniteNumber(out.textChunkThrottle);
+    if (_n === null) {
+      delete out.textChunkThrottle;
+    } else {
+      var _int2 = Math.trunc(_n);
+      if (_int2 < 0) {
+        delete out.textChunkThrottle;
+      } else {
+        out.textChunkThrottle = Math.min(_int2, 60000);
+      }
+    }
+  }
+
+  // collapseTextEdits: only accept actual booleans (string "false" should NOT become true)
+  if ("collapseTextEdits" in out) {
+    if (typeof out.collapseTextEdits !== "boolean") {
+      delete out.collapseTextEdits;
+    }
+  }
+
+  // undoRedoEventDispatchStrategy: enum, invalid ignored
+  if ("undoRedoEventDispatchStrategy" in out) {
+    var s = String(out.undoRedoEventDispatchStrategy);
+    if (!allowedDispatch.has(s)) {
+      delete out.undoRedoEventDispatchStrategy;
+    } else {
+      out.undoRedoEventDispatchStrategy = s;
+    }
+  }
+
+  // If you ever want: “invalid should revert to defaults” instead of “ignored”
+  // then this is where you'd use baseDefaults[key] as fallback.
+  return out;
 }
 
 /** @typedef {import("./undoable-elements/Action.js").Action} Action */
@@ -432,10 +550,12 @@ function clearRedoStack() {
 function trimHistory() {
   var _getConfig = getConfig(),
     maxHistorySize = _getConfig.maxHistorySize;
-  if (Number.isFinite(maxHistorySize) && maxHistorySize > 0) {
-    while (window.__GLOBAL_HISTORY__.length > maxHistorySize) {
-      window.__GLOBAL_HISTORY__.shift();
-    }
+
+  // Config is responsible for validation.
+  // This guard is just a last-ditch safety net, not “handling”.
+  if (!Number.isFinite(maxHistorySize) || maxHistorySize < 1) return;
+  while (window.__GLOBAL_HISTORY__.length > maxHistorySize) {
+    window.__GLOBAL_HISTORY__.shift();
   }
 }
 function pushActionToHistory(action) {
@@ -1050,7 +1170,7 @@ var BOUNDARY_KEYS = new Set(["Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "Arr
  * TextAction encapsulates a text change on an input/textarea/contenteditable.
  * It records the previous text and the new text.
  */
-var TextAction$1 = /*#__PURE__*/function (_Action) {
+var TextAction = /*#__PURE__*/function (_Action) {
   /**
    * @param {HTMLElement} textElement
    * @param {TextBox} textBoxWrapper
@@ -1128,7 +1248,7 @@ var TextBox = /*#__PURE__*/function (_UndoableElement) {
       // fall back to a simple previous => current action.
       if (!this.chunkActive) {
         if (finalValue !== this.previousValue) {
-          var action = new TextAction$1(this.element, this, this.previousValue, finalValue);
+          var action = new TextAction(this.element, this, this.previousValue, finalValue);
           pushActionToHistory(action);
           this.previousValue = finalValue;
         }
@@ -1137,7 +1257,7 @@ var TextBox = /*#__PURE__*/function (_UndoableElement) {
 
       // Chunk was active, only commit if something actually changed from the start.
       if (finalValue !== this.chunkStartValue) {
-        var _action = new TextAction$1(this.element, this, this.chunkStartValue, finalValue);
+        var _action = new TextAction(this.element, this, this.chunkStartValue, finalValue);
         pushActionToHistory(_action);
         this.previousValue = finalValue;
       }
@@ -1235,252 +1355,6 @@ var TextBox = /*#__PURE__*/function (_UndoableElement) {
 _defineProperty(TextBox, "_instances", new Set());
 
 /**
- * Time window (ms) to merge consecutive keystrokes into a single chunk
- */
-var CHUNK_MERGE_DELAY = 500;
-
-/**
- * Pressing these keys will break the current chunk immediately
- */
-var BOUNDARY_KEY_LIST = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-
-/**
- * TextAction represents a single edit from oldValue -> newValue
- * for a text-based element (input, textarea, or contenteditable).
- */
-var TextAction = /*#__PURE__*/function (_Action) {
-  /**
-   * @param {HTMLElement} element - The text-based element.
-   * @param {string} oldValue - The text before the change.
-   * @param {string} newValue - The text after the change.
-   */
-  function TextAction(element, oldValue, newValue) {
-    var _this;
-    _classCallCheck(this, TextAction);
-    _this = _callSuper(this, TextAction, [element]);
-    _this.oldValue = oldValue;
-    _this.newValue = newValue;
-    return _this;
-  }
-  _inherits(TextAction, _Action);
-  return _createClass(TextAction, [{
-    key: "redo",
-    value: function redo() {
-      setValue(this.element, this.newValue);
-    }
-  }, {
-    key: "undo",
-    value: function undo() {
-      setValue(this.element, this.oldValue);
-    }
-  }]);
-}(Action);
-
-/**
- * Manages partial text edits (chunks) while typing, then merges them
- * into one final action on blur.
- */
-var TextChunkManager = /*#__PURE__*/function () {
-  function TextChunkManager(element, initialText) {
-    _classCallCheck(this, TextChunkManager);
-    this.element = element;
-    this.initialText = initialText; // text at the moment of focus
-    this.sessionEdits = []; // partial actions in this focus session
-    this.currentEdit = null; // the chunk currently being built
-    this.lastChunkTimestamp = 0; // last time we updated a chunk
-    this.boundaryKeyDetected = false;
-  }
-
-  /**
-   * Initialize or reset the chunking session (on focus).
-   */
-  return _createClass(TextChunkManager, [{
-    key: "startSession",
-    value: function startSession() {
-      this.sessionEdits = [];
-      this.currentEdit = null;
-      this.lastChunkTimestamp = 0;
-      this.boundaryKeyDetected = false;
-    }
-
-    /**
-     * Process a keydown event to detect boundary keys (Enter, arrows).
-     */
-  }, {
-    key: "processKeydown",
-    value: function processKeydown(event) {
-      if (BOUNDARY_KEY_LIST.includes(event.key)) {
-        // Finalize current chunk if user pressed a boundary key
-        this.finalizeCurrentEdit();
-        this.boundaryKeyDetected = true;
-      } else {
-        this.boundaryKeyDetected = false;
-      }
-    }
-
-    /**
-     * Process an input event to create or merge partial edits.
-     */
-  }, {
-    key: "processInput",
-    value: function processInput() {
-      var newValue = getValue(this.element);
-      var now = Date.now();
-      if (!this.currentEdit) {
-        // Start a new chunk for the first keystroke
-        this.startNewEdit(newValue);
-      } else {
-        // Check time since last update
-        var timeDelta = now - this.lastChunkTimestamp;
-        if (timeDelta < CHUNK_MERGE_DELAY && !this.boundaryKeyDetected) {
-          // Merge with current chunk
-          this.mergeIntoCurrentEdit(newValue);
-        } else {
-          // Finalize old chunk, start a new one
-          this.finalizeCurrentEdit();
-          this.startNewEdit(newValue);
-        }
-      }
-      this.lastChunkTimestamp = now;
-    }
-
-    /**
-     * Creates a new chunk from the last known text -> current text.
-     */
-  }, {
-    key: "startNewEdit",
-    value: function startNewEdit(newValue) {
-      // For the first chunk or if we've had partials before
-      // the oldValue is either the finalValue of the last chunk
-      // or the initial text at focus if none.
-      var oldVal = this.sessionEdits.length > 0 ? this.sessionEdits[this.sessionEdits.length - 1].newValue : this.initialText;
-      var action = new TextAction(this.element, oldVal, newValue);
-      window.__GLOBAL_HISTORY__.push(action);
-      window.__REDO_STACK__.length = 0;
-      this.sessionEdits.push(action);
-      this.currentEdit = action;
-    }
-
-    /**
-     * Merges the newValue into the current chunk action object.
-     */
-  }, {
-    key: "mergeIntoCurrentEdit",
-    value: function mergeIntoCurrentEdit(newValue) {
-      if (!this.currentEdit) return;
-
-      // Pop the top of the global history
-      var popped = window.__GLOBAL_HISTORY__.pop();
-      if (popped !== this.currentEdit) {
-        // Edge case: partial undos might have removed or changed the top
-        if (popped) {
-          // Put it back if mismatch
-          window.__GLOBAL_HISTORY__.push(popped);
-        }
-        return;
-      }
-
-      // Update current chunk's newValue
-      this.currentEdit.newValue = newValue;
-      // Re-push updated chunk
-      window.__GLOBAL_HISTORY__.push(this.currentEdit);
-
-      // Also update the sessionEdits array
-      this.sessionEdits[this.sessionEdits.length - 1].newValue = newValue;
-    }
-
-    /**
-     * Finalize the current chunk so subsequent input starts a new chunk.
-     */
-  }, {
-    key: "finalizeCurrentEdit",
-    value: function finalizeCurrentEdit() {
-      this.currentEdit = null;
-    }
-
-    /**
-     * On blur, unify partial actions into one big action: initialText -> finalValue.
-     */
-  }, {
-    key: "finalizeFocusSession",
-    value: function finalizeFocusSession(finalValue) {
-      // If no actual change, do nothing
-      if (this.initialText === finalValue) return;
-
-      // Remove partial actions from global history
-      while (this.sessionEdits.length > 0) {
-        var partial = this.sessionEdits.pop();
-        var idx = window.__GLOBAL_HISTORY__.indexOf(partial);
-        if (idx !== -1) {
-          window.__GLOBAL_HISTORY__.splice(idx, 1);
-        }
-      }
-
-      // Create one merged action
-      var mergedAction = new TextAction(this.element, this.initialText, finalValue);
-      window.__GLOBAL_HISTORY__.push(mergedAction);
-      window.__REDO_STACK__.length = 0;
-    }
-  }]);
-}();
-/**
- * TextBox uses a TextChunkManager to handle partial text edits (chunks) while typing,
- * then merges them into a single action when the user blurs the field.
- */
-var TextBoxCollapse = /*#__PURE__*/function (_UndoableElement) {
-  function TextBoxCollapse(element) {
-    var _this2;
-    _classCallCheck(this, TextBoxCollapse);
-    _this2 = _callSuper(this, TextBoxCollapse, [element]);
-    _this2.initialFocusValue = null;
-    _this2.chunkManager = null;
-    _this2.attachListeners();
-    return _this2;
-  }
-  _inherits(TextBoxCollapse, _UndoableElement);
-  return _createClass(TextBoxCollapse, [{
-    key: "attachListeners",
-    value: function attachListeners() {
-      var _this3 = this;
-      // On focus, start a new chunking session
-      this.element.addEventListener('focus', function () {
-        _this3.initialFocusValue = getValue(_this3.element);
-        _this3.chunkManager = new TextChunkManager(_this3.element, _this3.initialFocusValue);
-        _this3.chunkManager.startSession();
-      });
-
-      // On keydown, detect boundary keys
-      this.element.addEventListener('keydown', function (event) {
-        var _this3$chunkManager;
-        // If overriding native undo, you might handle Ctrl+Z here
-        (_this3$chunkManager = _this3.chunkManager) === null || _this3$chunkManager === void 0 || _this3$chunkManager.processKeydown(event);
-      });
-
-      // On input, create or merge partial actions
-      this.element.addEventListener('input', function () {
-        var _this3$chunkManager2;
-        (_this3$chunkManager2 = _this3.chunkManager) === null || _this3$chunkManager2 === void 0 || _this3$chunkManager2.processInput();
-      });
-
-      // On blur/focusout, unify partial actions into one merged action
-      var blurEvent = isContentEditable(this.element) ? 'focusout' : 'blur';
-      this.element.addEventListener(blurEvent, function () {
-        if (!_this3.chunkManager) return;
-        var finalValue = getValue(_this3.element);
-        _this3.chunkManager.finalizeFocusSession(finalValue);
-
-        // Reset
-        _this3.initialFocusValue = null;
-        _this3.chunkManager = null;
-      });
-    }
-  }]);
-}(UndoableElement);
-
-/**
-
- */
-/**
  * Factory mapping: Each entry defines a CSS selector and a factory function
  * that takes a DOM element and returns an instance of an undoable handler.
  * This MUST be called at init-time, not import-time.
@@ -1492,7 +1366,7 @@ function createFactoryMap(config) {
   {
     selector: "\n        input[type=\"text\"],\n        input[type=\"search\"],\n        input[type=\"email\"],\n        input[type=\"url\"],\n        input[type=\"number\"],\n        input[type=\"tel\"],\n        textarea,\n        [contenteditable=\"true\"]\n      ",
     factory: function factory(element) {
-      return config.collapseTextEdits ? new TextBoxCollapse(element, config) : new TextBox(element, config);
+      return config.collapseTextEdits ? new TextBox(element, config) : new TextBox(element, config);
     }
   }, {
     selector: 'input[type="checkbox"]',
@@ -1752,6 +1626,14 @@ var _reinitScheduled = false;
 var _reinitQueued = false;
 // For when reinit is requested multiple times in succession. Last config matters.
 var _latestReinitInReason = null;
+
+// TODO: leaving it here for now, but could just use setTimeout as is
+// queueMicrotask fallback
+// const queueMicrotaskFn =
+//     (typeof queueMicrotask === "function")
+//         ? queueMicrotask
+//         : (fn) => Promise.resolve().then(fn);
+
 function runInit() {
   if (_initialized || _initInProgress) return;
   _initInProgress = true;
