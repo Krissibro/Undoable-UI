@@ -24,9 +24,6 @@ import { __setConfig } from "../src/config.js";
 describe("history", () => {
     beforeEach(() => {
         __setConfig({ maxHistorySize: 3 });
-        ensureHistoryStacks();
-        window.__GLOBAL_HISTORY__.length = 0;
-        window.__REDO_STACK__.length = 0;
     });
 
     it("ensureHistoryStacks initializes globals", () => {

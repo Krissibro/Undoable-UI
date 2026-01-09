@@ -4,9 +4,6 @@ import { Radio } from "../../../src/undoable-elements/elements/Radio.js";
 
 describe("Radio", () => {
     beforeEach(() => {
-        ensureHistoryStacks();
-        window.__GLOBAL_HISTORY__.length = 0;
-        window.__REDO_STACK__.length = 0;
         // clear static cache between tests
         delete Radio.previousSelections;
     });

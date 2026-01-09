@@ -3,12 +3,6 @@ import { ensureHistoryStacks, getHistoryStack } from "../../../src/history.js";
 import { Checkbox } from "../../../src/undoable-elements/elements/Checkbox.js";
 
 describe("Checkbox", () => {
-    beforeEach(() => {
-        ensureHistoryStacks();
-        window.__GLOBAL_HISTORY__.length = 0;
-        window.__REDO_STACK__.length = 0;
-    });
-
     it("pushes a CheckboxAction on change and undo/redo toggles checked state", () => {
         const el = document.createElement("input");
         el.type = "checkbox";

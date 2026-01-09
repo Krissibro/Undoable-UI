@@ -3,12 +3,6 @@ import { ensureHistoryStacks, getHistoryStack } from "../../../src/history.js";
 import { DateTime } from "../../../src/undoable-elements/elements/DateTime.js";
 
 describe("DateTime", () => {
-    beforeEach(() => {
-        ensureHistoryStacks();
-        window.__GLOBAL_HISTORY__.length = 0;
-        window.__REDO_STACK__.length = 0;
-    });
-
     it("records a single action even if both input and change fire", () => {
         const el = document.createElement("input");
         el.type = "date";

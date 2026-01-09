@@ -3,12 +3,6 @@ import { ensureHistoryStacks, getHistoryStack } from "../../../src/history.js";
 import { ColorPicker } from "../../../src/undoable-elements/elements/ColorPicker.js";
 
 describe("ColorPicker", () => {
-    beforeEach(() => {
-        ensureHistoryStacks();
-        window.__GLOBAL_HISTORY__.length = 0;
-        window.__REDO_STACK__.length = 0;
-    });
-
     it("records changes on change event and updates oldColor", () => {
         const el = document.createElement("input");
         el.type = "color";

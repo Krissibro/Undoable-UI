@@ -5,12 +5,6 @@ import { undo, redo } from "../src/commands.js";
 import { TextBox } from "../src/undoable-elements/elements/TextBox.js";
 
 describe("commands (undo/redo)", () => {
-    beforeEach(() => {
-        ensureHistoryStacks();
-        window.__GLOBAL_HISTORY__.length = 0;
-        window.__REDO_STACK__.length = 0;
-    });
-
     it("undo/redo moves actions between stacks and dispatches events when strategy=both", () => {
         setBaselineConfig({ undoRedoEventDispatchStrategy: "both", textChunkThrottle: 0 });
 

@@ -48,7 +48,7 @@ describe("lifecycle", () => {
         const reinitEvents = events.filter((d) => d.phase === "reinitializing");
         const readyEvents = events.filter((d) => d.phase === "ready");
 
-        // With your current guard (_reinitScheduled), this should be exactly one reinit scheduled.
+        // With current guard (_reinitScheduled), this should be exactly one reinit scheduled.
         expect(reinitEvents).toHaveLength(1);
         expect(readyEvents).toHaveLength(1);
         expect(readyEvents[0].reason).toBe("updateConfig");
