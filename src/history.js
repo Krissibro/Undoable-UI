@@ -11,11 +11,30 @@ export function clearRedoStack() {
 }
 
 function trimHistory() {
-    const { maxHistorySize } = getConfig();
-    if (Number.isFinite(maxHistorySize) && maxHistorySize > 0) {
-        while (window.__GLOBAL_HISTORY__.length > maxHistorySize) {
-            window.__GLOBAL_HISTORY__.shift();
-        }
+    let { maxHistorySize } = getConfig();
+
+    // Normalize: accept numbers or numeric strings
+    maxHistorySize = typeof maxHistorySize === "string"
+        ? Number(maxHistorySize)
+        : maxHistorySize;
+
+    // Fallback for nonsense (NaN, Infinity, undefined, objects, etc.)
+    if (!Number.isFinite(maxHistorySize)) {
+        return; // or set to a default like 100, depending on your philosophy
+    }
+
+    // Clamp + integerize
+    maxHistorySize = Math.max(0, Math.trunc(maxHistorySize));
+
+    // 0 means "history disabled"
+    if (maxHistorySize === 0) {
+        window.__GLOBAL_HISTORY__.length = 0;
+        return;
+    }
+
+    const overflow = window.__GLOBAL_HISTORY__.length - maxHistorySize;
+    if (overflow > 0) {
+        window.__GLOBAL_HISTORY__.splice(0, overflow);
     }
 }
 
