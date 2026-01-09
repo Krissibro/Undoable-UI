@@ -8,7 +8,14 @@
     <!-- UMD bundle exposes window.UndoableUI -->
     <script src="dist/undoable-ui.umd.js"></script>
 
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/layout.css" />
+    <link rel="stylesheet" href="styles/components.css" />
+    <link rel="stylesheet" href="styles/keyboard.css" />
+    <link rel="stylesheet" href="styles/demo-grid.css" />
+    <link rel="stylesheet" href="styles/controllers.css" />
+    <link rel="stylesheet" href="styles/responsive.css" />
 </head>
 
 <body>
@@ -50,26 +57,31 @@
     <main class="layout">
         <aside class="sidebar">
             <section class="panel">
-                <div class="panel-title">Actions</div>
+                <div class="control-panel-title">Undo Actions</div>
+
+                <p class="panel-desc subtle">
+                    Shortcuts won’t override native undo inside certain built-in browser modals.
+                </p>
 
                 <div class="btn-row">
                     <button class="btn" onclick="UndoableUI.undo()">Undo</button>
                     <button class="btn" onclick="UndoableUI.redo()">Redo</button>
                 </div>
-
-                <p class="hint">
-                    Shortcuts won’t override native undo inside certain built-in browser modals.
-                </p>
             </section>
 
             <!-- Add-to-grid mounts here -->
             <section class="panel">
-                <div class="panel-title">Add New Test Groups</div>
+                <div class="control-panel-title">Add New Test Groups</div>
+                <div class="panel-desc subtle">
+                    For testing if the MutationObserver catches and adds undoable wrappers to new elements.
+                </div>
                 <div id="add-squares-to-grid-controller"></div>
             </section>
 
             <!-- Config panel mounts here -->
             <section class="panel">
+                <div class="control-panel-title">Config</div>
+                <div class="panel-desc subtle">Live tweak UndoableUI behavior</div>
                 <div id="config-controller"></div>
             </section>
         </aside>
@@ -77,100 +89,98 @@
         <section class="content">
             <div class="grid-container" id="grid">
 
-                <!-- Text-Based Inputs (Spanning Two Columns) -->
+                <!-- Text-Based Inputs -->
                 <div class="group text-based">
                     <h2>Text-Based Inputs</h2>
-                    <div class="text-subgrid">
 
+                    <div class="text-subgrid">
                         <!-- Column 1 -->
                         <div class="nested-grid">
-                            <label for="textbox1">Text:</label>
+                            <label class="test-label" for="textbox1">Text:</label>
                             <input type="text" id="textbox1" name="textbox1" placeholder="Type something here...">
 
-                            <label for="textbox2">Search:</label>
+                            <label class="test-label" for="textbox2">Search:</label>
                             <input type="search" id="textbox2" name="textbox2" placeholder="Search...">
 
-                            <label for="textbox3">Email:</label>
+                            <label class="test-label" for="textbox3">Email:</label>
                             <input type="email" id="textbox3" name="textbox3" placeholder="example@example.com">
 
-                            <label for="textbox4">URL:</label>
+                            <label class="test-label" for="textbox4">URL:</label>
                             <input type="url" id="textbox4" name="textbox4" placeholder="https://example.com">
 
-                            <label for="textbox5">Number:</label>
+                            <label class="test-label" for="textbox5">Number:</label>
                             <input type="number" id="textbox5" name="textbox5" placeholder="Enter a number">
 
-                            <label for="textbox6">Tel:</label>
+                            <label class="test-label" for="textbox6">Tel:</label>
                             <input type="tel" id="textbox6" name="textbox6" placeholder="Phone number">
                         </div>
 
                         <!-- Column 2 -->
                         <div>
-                            <label>Textarea:
-                                <br>
-                                <textarea class="editable-box" id="textarea1" rows="3" placeholder="Multi-line text"></textarea>
-                            </label>
+                            <label class="test-label" for="textarea1">Textarea:</label>
+                            <br>
+                            <textarea class="editable-box" id="textarea1" rows="3" placeholder="Multi-line text"></textarea>
 
-                            <label>Content Editable:
-                                <div id="contentEditable1" class="editable-box" contenteditable="true">
-                                    Type some text here...
-                                </div>
-                            </label>
+                            <label class="test-label" for="contentEditable1">Content Editable:</label>
+                            <div id="contentEditable1" class="editable-box" contenteditable="true">
+                                Type some text here...
+                            </div>
                         </div>
-
                     </div>
                 </div>
 
                 <!-- Radio Inputs (Group "group1") -->
                 <div class="group">
                     <h2>Radio Inputs (Group "group1")</h2>
-                    <label><input type="radio" name="group1" id="radio1" /> Radio 1</label>
-                    <label><input type="radio" name="group1" id="radio2" /> Radio 2</label>
-                    <label><input type="radio" name="group1" id="radio3" /> Radio 3</label>
-                    <label><input type="radio" name="group1" id="radio4" /> Radio 4</label>
+                    <label class="test-label"><input type="radio" name="group1" id="radio1" /> Radio 1</label>
+                    <label class="test-label"><input type="radio" name="group1" id="radio2" /> Radio 2</label>
+                    <label class="test-label"><input type="radio" name="group1" id="radio3" /> Radio 3</label>
+                    <label class="test-label"><input type="radio" name="group1" id="radio4" /> Radio 4</label>
                 </div>
 
                 <!-- Radio Inputs (Group "group2") -->
                 <div class="group">
                     <h2>Radio Inputs (Group "group2")</h2>
-                    <label><input type="radio" name="group2" id="radio5" /> Radio 1</label>
-                    <label><input type="radio" name="group2" id="radio6" /> Radio 2</label>
-                    <label><input type="radio" name="group2" id="radio7" /> Radio 3</label>
-                    <label><input type="radio" name="group2" id="radio8" /> Radio 4</label>
+                    <label class="test-label"><input type="radio" name="group2" id="radio5" /> Radio 1</label>
+                    <label class="test-label"><input type="radio" name="group2" id="radio6" /> Radio 2</label>
+                    <label class="test-label"><input type="radio" name="group2" id="radio7" /> Radio 3</label>
+                    <label class="test-label"><input type="radio" name="group2" id="radio8" /> Radio 4</label>
                 </div>
 
                 <!-- Checkboxes -->
                 <div class="group">
                     <h2>Checkboxes</h2>
-                    <label><input type="checkbox" id="checkbox1" /> Option 1</label>
-                    <label><input type="checkbox" id="checkbox2" /> Option 2</label>
-                    <label><input type="checkbox" id="checkbox3" /> Option 3</label>
-                    <label><input type="checkbox" id="checkbox4" /> Option 4</label>
+                    <label class="test-label"><input type="checkbox" id="checkbox1" /> Option 1</label>
+                    <label class="test-label"><input type="checkbox" id="checkbox2" /> Option 2</label>
+                    <label class="test-label"><input type="checkbox" id="checkbox3" /> Option 3</label>
+                    <label class="test-label"><input type="checkbox" id="checkbox4" /> Option 4</label>
                 </div>
 
                 <!-- Range Input -->
                 <div class="group">
                     <h2>Range Input</h2>
-                    <label for="range1">Volume (for example):</label>
+                    <label class="test-label" for="range1">Volume (for example):</label>
                     <input type="range" id="range1" min="0" max="100" value="50">
                 </div>
 
                 <!-- Date/Time Inputs -->
                 <div class="group">
                     <h2>Date/Time Inputs</h2>
-                    <label for="date1">Date:</label>
+
+                    <label class="test-label" for="date1">Date:</label>
                     <input type="date" id="date1" value="2023-01-01">
 
-                    <label for="time1">Time:</label>
+                    <label class="test-label" for="time1">Time:</label>
                     <input type="time" id="time1" value="12:00">
 
-                    <label for="datetime1">Datetime:</label>
+                    <label class="test-label" for="datetime1">Datetime:</label>
                     <input type="datetime-local" id="datetime1" value="2023-01-01T12:00">
                 </div>
 
                 <!-- Select Input -->
                 <div class="group">
                     <h2>Select Input</h2>
-                    <label for="select1">Choose an option:</label>
+                    <label class="test-label" for="select1">Choose an option:</label>
                     <select id="select1">
                         <option value="option1">Option 1</option>
                         <option value="option2">Option 2</option>
@@ -182,10 +192,10 @@
                 <!-- Color Picker -->
                 <div class="group">
                     <h2>Color Picker</h2>
-                    <label for="color1">Pick a color:</label>
-                    <input type="color" id="color1" value="#ff0000">
+                    <label class="test-label" for="color1">Pick a color:</label>
+                    <input type="color" class="color-picker" id="color1" value="#006994">
 
-                    <div id="color1Value" style="margin-top: 6px; font-family: monospace;">
+                    <div id="color1Value" class="mono-value">
                         #ff0000
                     </div>
                 </div>

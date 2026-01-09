@@ -3,17 +3,15 @@ import { htmlToElement, qs } from "./domUtils.js";
 
 function injectControls(hostEl) {
     hostEl.innerHTML = `
-    <div class="cfg-subtitle">For testing if the MutationObserver catches and adds undoable wrappers to new elements.</div>
-    <br>
-    <div class="add-controls">
-        
-      <select id="templateSelect">
+    <div class="ui-row">
+      <select class="ui-input" id="templateSelect">
         ${Object.keys(templates).map(k => `<option value="${k}">${k}</option>`).join("")}
       </select>
-      <button id="addToGridBtn" type="button">Add to grid</button>
+      <button class="btn" id="addToGridBtn" type="button">Add to grid</button>
     </div>
   `;
 }
+
 
 function uniquifyRadioNames(groupEl) {
     const radios = groupEl.querySelectorAll('input[type="radio"]');

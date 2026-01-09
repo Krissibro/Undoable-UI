@@ -1,0 +1,162 @@
+/* Shared card look: panels + test groups */
+.panel, .group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px;
+}
+
+/* Titles */
+.panel-title,
+.group h2 {
+    font-weight: 700;
+    font-size: var(--fs-card-title);
+    text-align: center;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border)
+
+}
+.control-panel-title {
+    font-weight: 700;
+    font-size: var(--fs-card-title);
+    text-align: left;
+    margin-bottom: 8px;
+}
+
+/* Panel descriptions (standardized) */
+.panel-desc {
+    margin: 0 0 10px 0;
+    font-size: var(--fs-card-description);
+}
+
+/* Backwards compatibility if any old .hint remains */
+.hint {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+/* Buttons */
+.btn {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: #fafafa;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.btn:hover { background: #f0f0f0; }
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.22);
+    font-weight: 500;
+}
+
+.btn-row { display: flex; gap: 10px; }
+
+/* Shared form primitives (used by controllers) */
+.ui-field { display: block; }
+
+.ui-label {
+    display: block;
+    font-size: var(--fs-control-panel-label);
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+
+.ui-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    font-size: var(--fs-field);
+}
+
+.ui-input:focus {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-color: rgba(0, 0, 0, 0.28);
+}
+
+.ui-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+/* TEST GRID typography normalization */
+.group > label {
+    display: block;
+    margin: 8px 0;
+}
+
+/* Make group inputs match ui-input without adding classes everywhere */
+.group input:not([type="checkbox"]):not([type="radio"]),
+.group select,
+.group textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    font-size: var(--fs-field);
+}
+
+.group input:not([type="checkbox"]):not([type="radio"]):focus,
+.group select:focus,
+.group textarea:focus {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-color: rgba(0,0,0,0.28);
+}
+
+/* contenteditable / textarea-like boxes */
+.editable-box {
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: var(--radius-sm);
+    min-height: 70px;
+    padding: 8px 10px;
+    background: #fff;
+}
+
+
+/* --- TEST GRID labels (explicit class) --- */
+.test-label {
+    font-size: var(--fs-test-panel-label);
+    color: var(--text);
+    font-weight: 500;
+}
+
+
+/*.nested-grid > .test-label {*/
+    /*color: var(--muted);*/
+    /*font-weight: 500;*/
+/*}*/
+
+/* If you want the nested-grid left labels aligned and consistent */
+.nested-grid > .test-label {
+    justify-self: end;
+    padding-right: 6px;
+}
+
+@media (max-width: 720px) {
+    .nested-grid > .test-label {
+        justify-self: start;
+        padding-right: 0;
+    }
+}
+
+.color-picker {
+    width: 100px;
+    height: 40px;
+}

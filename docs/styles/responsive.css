@@ -1,0 +1,15 @@
+@media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; }
+    .group.text-based { grid-column: span 1; }
+}
+
+@media (max-width: 720px) {
+    .text-subgrid { grid-template-columns: 1fr; }
+    .nested-grid { grid-template-columns: 1fr; }
+}
+
+/* Hide keyboard hints on mobile / touch */
+@media (max-width: 720px), (hover: none) and (pointer: coarse) {
+    .kbd-hints { display: none; }
+}
