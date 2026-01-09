@@ -160,3 +160,10 @@
     width: 100px;
     height: 40px;
 }
+
+/* Prevent text selection on checkbox/radio labels (test grid + dynamic templates) */
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]) {
+    user-select: none;
+    -webkit-user-select: none;
+}
