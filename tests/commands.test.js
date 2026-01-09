@@ -122,4 +122,51 @@ describe("commands (undo/redo)", () => {
         const cfg = getConfig();
         expect(cfg.undoRedoEventDispatchStrategy).toBe("none");
     });
+
+    // ✅ Additional invariants
+
+    it("undo/redo are no-ops when stacks are empty", () => {
+        setBaselineConfig({ undoRedoEventDispatchStrategy: "both", textChunkThrottle: 0 });
+
+        expect(getHistoryStack()).toHaveLength(0);
+        expect(getRedoStack()).toHaveLength(0);
+
+        // should not throw
+        expect(() => undo()).not.toThrow();
+        expect(() => redo()).not.toThrow();
+
+        expect(getHistoryStack()).toHaveLength(0);
+        expect(getRedoStack()).toHaveLength(0);
+    });
+
+    it("a new action after undo clears the redo stack (classic invariant)", () => {
+        setBaselineConfig({ undoRedoEventDispatchStrategy: "none", textChunkThrottle: 0 });
+
+        const input = document.createElement("input");
+        input.type = "text";
+        document.body.appendChild(input);
+
+        const tb = new TextBox(input, getConfig());
+
+        // Action A
+        input.value = "A";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        expect(getHistoryStack()).toHaveLength(1);
+        expect(getRedoStack()).toHaveLength(0);
+
+        // Undo A => redo stack has 1 action
+        undo();
+        expect(getHistoryStack()).toHaveLength(0);
+        expect(getRedoStack()).toHaveLength(1);
+        expect(input.value).toBe("");
+
+        // New action B should clear redo stack
+        input.value = "B";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+
+        expect(getHistoryStack()).toHaveLength(1);
+        expect(getRedoStack()).toHaveLength(0);
+
+        tb.dispose();
+    });
 });

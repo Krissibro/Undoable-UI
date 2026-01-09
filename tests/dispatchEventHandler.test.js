@@ -25,7 +25,7 @@ describe("dispatchEventHandler", () => {
 
         const action = {
             element: a,
-            affectedElements: () => [a, b]
+            affectedElements: () => [a, b],
         };
 
         dispatchEvents(action, { undoRedoEventDispatchStrategy: "change" });
@@ -34,7 +34,7 @@ describe("dispatchEventHandler", () => {
 
     it("emitStatus dispatches undoableui:status", () => {
         const spy = vi.fn();
-        window.addEventListener("undoableui:status", spy);
+        window.addEventListener("undoableui:status", spy, { once: true });
 
         emitStatus({ phase: "ready", busy: false });
 

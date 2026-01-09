@@ -15,6 +15,7 @@ describe("elementFactoryMap", () => {
 
         const map2 = createFactoryMap({ collapseTextEdits: true, textChunkThrottle: 0 });
         const inst2 = map2[0].factory(input);
+        // collapseTextEdits currently points to TextBox placeholder until TextBoxCollapse is reintroduced.
         expect(inst2).toBeInstanceOf(TextBox);
         // TextBoxCollapse doesn't implement dispose cleanup via base dispose? it does (inherits). safe:
         inst2.dispose();
