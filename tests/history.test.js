@@ -82,4 +82,13 @@ describe("history", () => {
 
         expect(getHistoryStack()).toHaveLength(0);
     });
+
+    it("trimming keeps newest actions (maxHistorySize=1)", () => {
+        __setConfig({ maxHistorySize: 1 });
+
+        pushActionToHistory({ id: 1 });
+        pushActionToHistory({ id: 2 });
+
+        expect(getHistoryStack().map((a) => a.id)).toEqual([2]);
+    });
 });

@@ -13,7 +13,7 @@ describe("index.js global exposure", () => {
         expect(typeof window.UndoableUI.getConfig).toBe("function");
     });
 
-    it("public API smoke: init wraps input and undo reverts value", async () => {
+    it("public API smoke: init wraps input and undo/redo works", async () => {
         vi.resetModules();
         await import("../src/index.js");
 
@@ -21,10 +21,11 @@ describe("index.js global exposure", () => {
         input.type = "text";
         document.body.appendChild(input);
 
-        // Assumes init() works with no args (common for libs like this).
-        // If your init signature differs, adjust the call here.
-        window.UndoableUI.updateConfig({ textChunkThrottle: 0, undoRedoEventDispatchStrategy: "none" });
         window.UndoableUI.init();
+        window.UndoableUI.updateConfig({
+            textChunkThrottle: 0,
+            undoRedoEventDispatchStrategy: "none",
+        });
 
         input.value = "hello";
         input.dispatchEvent(new Event("input", { bubbles: true }));

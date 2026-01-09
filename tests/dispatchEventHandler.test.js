@@ -41,4 +41,19 @@ describe("dispatchEventHandler", () => {
         expect(spy).toHaveBeenCalledTimes(1);
         expect(spy.mock.calls[0][0].detail).toEqual({ phase: "ready", busy: false });
     });
+
+    it("skips null/undefined affected elements", () => {
+        const el = document.createElement("input");
+        let inputCount = 0;
+
+        el.addEventListener("input", () => inputCount++);
+
+        const action = {
+            element: el,
+            affectedElements: () => [null, undefined, el],
+        };
+
+        dispatchEvents(action, { undoRedoEventDispatchStrategy: "input" });
+        expect(inputCount).toBe(1);
+    });
 });

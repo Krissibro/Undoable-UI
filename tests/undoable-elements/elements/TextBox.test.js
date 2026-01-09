@@ -58,6 +58,28 @@ describe("TextBox", () => {
         expect(getHistoryStack()[0].newValue).toBe("hello!");
     });
 
+    // ✅ NEW
+    it("commits pending chunk on blur (even if throttle timer hasn't fired)", () => {
+        vi.useFakeTimers();
+        ensureHistoryStacks();
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = "a";
+        document.body.appendChild(input);
+
+        new TextBox(input, { textChunkThrottle: 9999 });
+
+        input.value = "ab";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        expect(getHistoryStack()).toHaveLength(0);
+
+        input.dispatchEvent(new Event("blur", { bubbles: true }));
+        expect(getHistoryStack()).toHaveLength(1);
+        expect(getHistoryStack()[0].previousValue).toBe("a");
+        expect(getHistoryStack()[0].newValue).toBe("ab");
+    });
+
     it("flushAll commits active chunks across instances", () => {
         vi.useFakeTimers();
         ensureHistoryStacks();
@@ -85,8 +107,6 @@ describe("TextBox", () => {
     it("dispose removes instance from global flushing behavior", () => {
         vi.useFakeTimers();
         ensureHistoryStacks();
-        window.__GLOBAL_HISTORY__.length = 0;
-        window.__REDO_STACK__.length = 0;
 
         const input = document.createElement("input");
         input.type = "text";
@@ -98,10 +118,8 @@ describe("TextBox", () => {
         input.value = "ab";
         input.dispatchEvent(new Event("input", { bubbles: true }));
 
-        // Now dispose before flushing
         tb.dispose();
 
-        // Should not throw and should not commit anything from the disposed instance
         expect(() => TextBox.flushAll()).not.toThrow();
         expect(getHistoryStack()).toHaveLength(0);
     });

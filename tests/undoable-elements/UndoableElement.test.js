@@ -7,6 +7,7 @@ class TestWrapper extends UndoableElement {
         super(el);
         this.calls = 0;
         this.cleaned = false;
+        this.thisWasWrapper = false; // ✅ NEW
         this.attachListeners();
     }
     attachListeners() {
@@ -14,6 +15,7 @@ class TestWrapper extends UndoableElement {
     }
     handle() {
         this.calls++;
+        this.thisWasWrapper = this instanceof TestWrapper; // ✅ NEW
     }
     extraSubclassCleanup() {
         this.cleaned = true;
@@ -35,6 +37,18 @@ describe("UndoableElement base class", () => {
         });
 
         expect(w.calls).toBe(1);
+
+        w.dispose();
+    });
+
+    it("protected listener preserves `this` binding to the wrapper instance", () => {
+        const el = document.createElement("input");
+        el.type = "checkbox";
+
+        const w = new TestWrapper(el);
+        el.dispatchEvent(new Event("change"));
+
+        expect(w.thisWasWrapper).toBe(true);
 
         w.dispose();
     });
