@@ -1,0 +1,44 @@
+.container {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Top header */
+.topbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.topbar h1 {
+    margin: 0;
+    font-size: var(--fs-title);
+    line-height: 1.1;
+}
+
+.subtitle {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: var(--fs-subtitle);
+}
+
+/* Page layout */
+.layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 18px;
+    align-items: start;
+}
+
+.sidebar {
+    position: sticky;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.content { min-width: 0; }

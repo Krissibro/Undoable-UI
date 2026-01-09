@@ -1,0 +1,27 @@
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+/* Text-based group layout */
+.group.text-based { grid-column: span 2; }
+
+.text-subgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+/* Label/input two-column arrangement in the left column */
+.nested-grid {
+    display: grid;
+    grid-template-columns: 0.24fr 0.76fr;
+    gap: 10px;
+    align-items: center;
+}
+
+#textarea1 {
+    width: 100%;
+    resize: vertical;
+}

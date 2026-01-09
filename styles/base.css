@@ -1,0 +1,43 @@
+* { box-sizing: border-box; }
+
+html { font-size: 16px; }
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* Keep headings predictable */
+h1, h2, h3, p { margin: 0; }
+
+/* Kill browser default font sizing on form controls */
+input, select, textarea, button {
+    font: inherit;
+    line-height: inherit;
+}
+
+/* Placeholder: a bit smaller + quieter */
+input::placeholder,
+textarea::placeholder {
+    font-size: 0.95em;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+/* Utility: muted description text */
+.subtle {
+    color: var(--muted);
+    font-size: var(--fs-small);
+    line-height: 1.35;
+}
+
+/* Utility: monospace value block */
+.mono-value {
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    opacity: 0.9;
+}

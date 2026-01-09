@@ -15,28 +15,21 @@ function parseOptionalNumber(value) {
 
 function render(hostEl) {
     hostEl.innerHTML = `
-    <div class="cfg">
-      <div class="cfg-header">
-        <div>
-          <div class="cfg-title">Config</div>
-          <div class="cfg-subtitle">Live tweak UndoableUI behavior</div>
-        </div>
-      </div>
-
-      <div class="cfg-grid">
-        <label class="cfg-field">
-          <span class="cfg-label">textChunkThrottle (ms)</span>
-          <input id="cfg_textChunkThrottle" type="number" min="0" step="50" />
+    <div class="ctrl">
+      <div class="ui-grid-2">
+        <label class="ui-field">
+          <span class="ui-label">textChunkThrottle (ms)</span>
+          <input class="ui-input" id="cfg_textChunkThrottle" type="number" min="0" step="50" />
         </label>
 
-        <label class="cfg-field">
-          <span class="cfg-label">maxHistorySize</span>
-          <input id="cfg_maxHistorySize" type="number" min="1" step="10" />
+        <label class="ui-field">
+          <span class="ui-label">maxHistorySize</span>
+          <input class="ui-input" id="cfg_maxHistorySize" type="number" min="1" step="10" />
         </label>
 
-        <label class="cfg-field cfg-span-2">
-          <span class="cfg-label">undoRedoEventDispatchStrategy</span>
-          <select id="cfg_dispatchStrategy">
+        <label class="ui-field ui-span-2">
+          <span class="ui-label">undoRedoEventDispatchStrategy</span>
+          <select class="ui-input" id="cfg_dispatchStrategy">
             <option value="none">none</option>
             <option value="input">input</option>
             <option value="change">change</option>
@@ -44,31 +37,33 @@ function render(hostEl) {
           </select>
         </label>
 
-        <label class="cfg-check cfg-span-2">
+        <label class="ui-check ui-span-2">
           <input id="cfg_collapseTextEdits" type="checkbox" />
           <span>collapseTextEdits</span>
         </label>
 
-        <label class="cfg-check cfg-span-2">
+        <label class="ui-check ui-span-2">
           <input id="cfg_reinitialize" type="checkbox" checked />
           <span>Reinitialize wrappers and use updated config</span>
         </label>
       </div>
 
-      <div class="cfg-actions">
-        <button id="cfg_apply" class="cfg-btn cfg-btn-primary" type="button">Apply</button>
-        <button id="cfg_reset" class="cfg-btn" type="button">Reset</button>
+      <div class="ui-actions">
+        <button id="cfg_apply" class="btn btn-primary" type="button">Apply</button>
+        <button id="cfg_reset" class="btn" type="button">Reset</button>
       </div>
 
-      <div class="cfg-status" id="cfg_status"></div>
+      <div class="ui-status" id="cfg_status"></div>
 
-      <details class="cfg-details" open>
-        <summary class="cfg-summary">Current config</summary>
-        <pre id="cfg_output" class="cfg-output"></pre>
+      <details class="ui-details" open>
+        <summary class="ui-summary">Current config</summary>
+        <pre id="cfg_output" class="ui-pre"></pre>
       </details>
     </div>
   `;
 }
+
+
 
 /**
  * Status UX strategy:

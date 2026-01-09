@@ -2,6 +2,8 @@ import { onReady } from "./domUtils.js";
 import { initColorValueMirror } from "./colorValueMirror.js";
 import { mountAddSquaresController } from "./addSquaresController.js";
 import { mountConfigPanel } from "./configPanel.js";
+import { initKeyboardHints } from "./keyboardHints.js";
+
 
 onReady(() => {
     // Attach status listener FIRST, so we don't miss init/reinit events
@@ -36,4 +38,6 @@ onReady(() => {
         hostId: "add-squares-to-grid-controller",
         gridId: "grid",
     });
+
+    initKeyboardHints({ hostId: "kbdHints" });
 });
