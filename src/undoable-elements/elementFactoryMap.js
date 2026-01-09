@@ -5,12 +5,8 @@ import { DateTime } from "./elements/DateTime.js";
 import { Select } from "./elements/Select.js";
 import { ColorPicker } from "./elements/ColorPicker.js";
 import { TextBox } from "./elements/TextBox.js";
-import { TextBoxCollapse } from "./elements/TextBoxCollapse.js";
 
 
-/**
-
- */
 /**
  * Factory mapping: Each entry defines a CSS selector and a factory function
  * that takes a DOM element and returns an instance of an undoable handler.
