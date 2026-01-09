@@ -360,3 +360,21 @@ body[data-undoableui-busy="1"]::after {
     .sidebar { position: static; }
     .group.text-based { grid-column: span 1; }
 }
+
+
+/* --- Mobile: make Text-Based Inputs stack vertically (2 rows instead of 2 columns) --- */
+@media (max-width: 720px) {
+    .text-subgrid {
+        grid-template-columns: 1fr; /* was 1fr 1fr */
+    }
+
+    /* optional: make the left column’s label/input grid stack nicer on tiny screens */
+    .nested-grid {
+        grid-template-columns: 1fr; /* instead of 0.3fr 0.7fr */
+    }
+
+    /* optional: stop textarea doing the weird calc on small screens */
+    #textarea1 {
+        width: 100%;
+    }
+}
