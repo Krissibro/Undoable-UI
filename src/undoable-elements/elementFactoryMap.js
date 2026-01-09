@@ -33,7 +33,7 @@ export function createFactoryMap(config) {
       `,
             factory: element =>
                 config.collapseTextEdits
-                    ? new TextBoxCollapse(element, config)
+                    ? new TextBox(element, config)
                     : new TextBox(element, config),
         },
         {
