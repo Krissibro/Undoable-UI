@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { ensureHistoryStacks, getHistoryStack } from "../../../src/history.js";
+import { describe, it, expect } from "vitest";
+import { getHistoryStack } from "../../../src/history.js";
 import { ColorPicker } from "../../../src/undoable-elements/elements/ColorPicker.js";
 
 describe("ColorPicker", () => {

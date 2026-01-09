@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { setBaselineConfig, getConfig, updateConfig } from "../src/config.js";
-import { ensureHistoryStacks, getHistoryStack, getRedoStack } from "../src/history.js";
+import { getHistoryStack, getRedoStack } from "../src/history.js";
 import { undo, redo } from "../src/commands.js";
 import { TextBox } from "../src/undoable-elements/elements/TextBox.js";
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { ensureHistoryStacks, getHistoryStack } from "../../../src/history.js";
+import { getHistoryStack } from "../../../src/history.js";
 import { Radio } from "../../../src/undoable-elements/elements/Radio.js";
 
 describe("Radio", () => {
