@@ -38,3 +38,49 @@ describe("config", () => {
         expect(defaultConfig).toHaveProperty("maxHistorySize");
     });
 });
+
+describe("config validation / normalization", () => {
+    it("setBaselineConfig ignores nonsense/0/negative maxHistorySize and keeps defaults", () => {
+        setBaselineConfig({}); // reset to defaults
+
+        setBaselineConfig({ maxHistorySize: 0 });
+        expect(getConfig().maxHistorySize).toBe(defaultConfig.maxHistorySize);
+
+        setBaselineConfig({ maxHistorySize: -5 });
+        expect(getConfig().maxHistorySize).toBe(defaultConfig.maxHistorySize);
+
+        setBaselineConfig({ maxHistorySize: "lol" });
+        expect(getConfig().maxHistorySize).toBe(defaultConfig.maxHistorySize);
+    });
+
+    it("updateConfig ignores invalid maxHistorySize and does not overwrite current", () => {
+        setBaselineConfig({ maxHistorySize: 10 });
+
+        updateConfig({ maxHistorySize: "lol" });
+        expect(getConfig().maxHistorySize).toBe(10);
+
+        updateConfig({ maxHistorySize: 0 });
+        expect(getConfig().maxHistorySize).toBe(10);
+
+        updateConfig({ maxHistorySize: -1 });
+        expect(getConfig().maxHistorySize).toBe(10);
+    });
+
+    it("collapseTextEdits only accepts real booleans", () => {
+        setBaselineConfig({ collapseTextEdits: false });
+
+        updateConfig({ collapseTextEdits: "false" });
+        expect(getConfig().collapseTextEdits).toBe(false);
+
+        updateConfig({ collapseTextEdits: true });
+        expect(getConfig().collapseTextEdits).toBe(true);
+    });
+
+    it("invalid dispatch strategy is ignored", () => {
+        setBaselineConfig({ undoRedoEventDispatchStrategy: "both" });
+
+        updateConfig({ undoRedoEventDispatchStrategy: "banana" });
+        expect(getConfig().undoRedoEventDispatchStrategy).toBe("both");
+    });
+});
+

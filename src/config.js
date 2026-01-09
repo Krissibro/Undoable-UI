@@ -22,6 +22,7 @@ const allowedKeys = new Set([
     "collapseTextEdits",
     "undoRedoEventDispatchStrategy",
 ]);
+
 const allowedDispatch = new Set(["none", "input", "change", "both"]);
 
 
@@ -56,49 +57,78 @@ export function resetConfigToBaseline() {
 }
 
 
-function toInt(x, fallback) {
-    if (typeof x === "number" && Number.isFinite(x)) return Math.trunc(x);
-    if (typeof x === "string" && x.trim() !== "" && Number.isFinite(Number(x))) return Math.trunc(Number(x));
-    return fallback;
-}
 
-function clamp(n, min, max) {
-    return Math.min(max, Math.max(min, n));
+// ---------- normalization helpers ----------
+
+function toFiniteNumber(x) {
+    if (typeof x === "number") return Number.isFinite(x) ? x : null;
+    if (typeof x === "string") {
+        const s = x.trim();
+        if (s === "") return null;
+        const n = Number(s);
+        return Number.isFinite(n) ? n : null;
+    }
+    return null;
 }
 
 function normalizeConfig(partial = {}, baseDefaults) {
     const out = {};
 
-    // Only keep known keys (prevents typos silently doing nothing)
+    // Keep only known keys (typos get ignored)
     for (const [k, v] of Object.entries(partial)) {
         if (!allowedKeys.has(k)) continue;
         out[k] = v;
     }
 
-    // maxHistorySize: int 0..10000 (choose your ceiling)
+    // maxHistorySize: must be a finite int >= 1 (0/negative/nonsense ignored)
     if ("maxHistorySize" in out) {
-        const raw = toInt(out.maxHistorySize, baseDefaults.maxHistorySize);
-        out.maxHistorySize = clamp(raw, 1, 10000);
+        const n = toFiniteNumber(out.maxHistorySize);
+        if (n === null) {
+            delete out.maxHistorySize;
+        } else {
+            const int = Math.trunc(n);
+            if (int < 1) {
+                delete out.maxHistorySize;
+            } else {
+                // optional ceiling to avoid absurd memory
+                out.maxHistorySize = Math.min(int, 10000);
+            }
+        }
     }
 
-    // textChunkThrottle: int 0..60000ms
+    // textChunkThrottle: must be finite int >= 0 (negative/nonsense ignored)
     if ("textChunkThrottle" in out) {
-        const raw = toInt(out.textChunkThrottle, baseDefaults.textChunkThrottle);
-        out.textChunkThrottle = clamp(raw, 0, 60000);
+        const n = toFiniteNumber(out.textChunkThrottle);
+        if (n === null) {
+            delete out.textChunkThrottle;
+        } else {
+            const int = Math.trunc(n);
+            if (int < 0) {
+                delete out.textChunkThrottle;
+            } else {
+                out.textChunkThrottle = Math.min(int, 60000);
+            }
+        }
     }
 
-    // collapseTextEdits: boolean (coerce only simple cases if you want)
+    // collapseTextEdits: only accept actual booleans (string "false" should NOT become true)
     if ("collapseTextEdits" in out) {
-        out.collapseTextEdits = Boolean(out.collapseTextEdits);
+        if (typeof out.collapseTextEdits !== "boolean") {
+            delete out.collapseTextEdits;
+        }
     }
 
-    // undoRedoEventDispatchStrategy: enum
+    // undoRedoEventDispatchStrategy: enum, invalid ignored
     if ("undoRedoEventDispatchStrategy" in out) {
         const s = String(out.undoRedoEventDispatchStrategy);
-        out.undoRedoEventDispatchStrategy = allowedDispatch.has(s)
-            ? s
-            : baseDefaults.undoRedoEventDispatchStrategy;
+        if (!allowedDispatch.has(s)) {
+            delete out.undoRedoEventDispatchStrategy;
+        } else {
+            out.undoRedoEventDispatchStrategy = s;
+        }
     }
 
+    // If you ever want: “invalid should revert to defaults” instead of “ignored”
+    // then this is where you'd use baseDefaults[key] as fallback.
     return out;
 }

@@ -11,30 +11,14 @@ export function clearRedoStack() {
 }
 
 function trimHistory() {
-    let { maxHistorySize } = getConfig();
+    const { maxHistorySize } = getConfig();
 
-    // Normalize: accept numbers or numeric strings
-    maxHistorySize = typeof maxHistorySize === "string"
-        ? Number(maxHistorySize)
-        : maxHistorySize;
+    // Config is responsible for validation.
+    // This guard is just a last-ditch safety net, not “handling”.
+    if (!Number.isFinite(maxHistorySize) || maxHistorySize < 1) return;
 
-    // Fallback for nonsense (NaN, Infinity, undefined, objects, etc.)
-    if (!Number.isFinite(maxHistorySize)) {
-        return; // or set to a default like 100, depending on your philosophy
-    }
-
-    // Clamp + integerize
-    maxHistorySize = Math.max(0, Math.trunc(maxHistorySize));
-
-    // 0 means "history disabled"
-    if (maxHistorySize === 0) {
-        window.__GLOBAL_HISTORY__.length = 0;
-        return;
-    }
-
-    const overflow = window.__GLOBAL_HISTORY__.length - maxHistorySize;
-    if (overflow > 0) {
-        window.__GLOBAL_HISTORY__.splice(0, overflow);
+    while (window.__GLOBAL_HISTORY__.length > maxHistorySize) {
+        window.__GLOBAL_HISTORY__.shift();
     }
 }
 
