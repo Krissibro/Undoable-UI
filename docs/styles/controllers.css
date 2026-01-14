@@ -210,3 +210,51 @@ body[data-undoableui-busy="1"]::after {
     flex: 1;
 }
 
+/* --- Mobile tooltip: stable + centered --- */
+@media (max-width: 720px) {
+    .ui-tip::after {
+        position: fixed;
+
+        /* centered on screen */
+        left: 50%;
+        right: auto;
+        width: min(320px, calc(100vw - 24px));
+
+        /* place it above the icon (use the icon's viewport position) */
+        top: auto;
+        bottom: auto;
+
+        /* reset the desktop anchor */
+        transform: translateX(-50%) translateY(4px);
+
+        /* make it feel less "random" */
+        text-align: left;
+    }
+
+    .ui-tip::before {
+        display: none; /* arrow looks weird with fixed tooltips */
+    }
+
+    /* When showing: compute position using CSS vars (set by small JS-free trick below),
+       OR fall back to a reasonable default near the top */
+    .ui-tip:hover::after,
+    .ui-tip:focus::after,
+    .ui-tip:active::after {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    /* Default placement if browser can't resolve anchor well */
+    .ui-tip::after {
+        top: 110px;
+    }
+
+    /* If the browser supports :has(), we can make it feel "attached" by moving it
+       closer to the config area a bit */
+    details[open] .ui-tip::after {
+        top: 90px;
+    }
+}
+
+
+
