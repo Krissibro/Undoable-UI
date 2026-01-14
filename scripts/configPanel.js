@@ -17,35 +17,68 @@ function render(hostEl) {
     hostEl.innerHTML = `
     <div class="ctrl">
       <div class="ui-grid-2">
-        <label class="ui-field">
-          <span class="ui-label">textChunkThrottle (ms)</span>
+
+        <div class="ui-field">
+          <div class="ui-label-row">
+            <label class="ui-label" for="cfg_textChunkThrottle">textChunkThrottle (ms)</label>
+            <span class="ui-tip" tabindex="0"
+              data-tip="How long UndoableUI waits before grouping text edits into a single undo action. Higher = fewer undo actions while typing.">
+              ?
+            </span>
+          </div>
           <input class="ui-input" id="cfg_textChunkThrottle" type="number" min="0" step="50" />
-        </label>
+        </div>
 
-        <label class="ui-field">
-          <span class="ui-label">maxHistorySize</span>
+        <div class="ui-field">
+          <div class="ui-label-row">
+            <label class="ui-label" for="cfg_maxHistorySize">maxHistorySize</label>
+            <span class="ui-tip" tabindex="0"
+              data-tip="How many undo actions are kept in the history. When the limit is reached, the oldest actions are trimmed.">
+              ?
+            </span>
+          </div>
           <input class="ui-input" id="cfg_maxHistorySize" type="number" min="1" step="10" />
-        </label>
+        </div>
 
-        <label class="ui-field ui-span-2">
-          <span class="ui-label">undoRedoEventDispatchStrategy</span>
+        <div class="ui-field ui-span-2">
+          <div class="ui-label-row">
+            <label class="ui-label" for="cfg_dispatchStrategy">undoRedoEventDispatchStrategy</label>
+            <span class="ui-tip" tabindex="0"
+              data-tip="After undo/redo, UndoableUI can dispatch browser events so the rest of the page updates like a normal user change. 
+              See the text under the color picker for example.">
+              ?
+            </span>
+          </div>
           <select class="ui-input" id="cfg_dispatchStrategy">
             <option value="none">none</option>
             <option value="input">input</option>
             <option value="change">change</option>
             <option value="both">both</option>
           </select>
-        </label>
+        </div>
 
-        <label class="ui-check ui-span-2">
-          <input id="cfg_collapseTextEdits" type="checkbox" />
-          <span>collapseTextEdits</span>
-        </label>
+        <div class="ui-check ui-span-2">
+          <label class="ui-check-label" for="cfg_collapseTextEdits">
+            <input id="cfg_collapseTextEdits" type="checkbox" />
+            <span>collapseTextEdits</span>
+          </label>
+          <span class="ui-tip" tabindex="0"
+            data-tip="Currently not implemented :)">
+            ?
+          </span>
+        </div>
 
-        <label class="ui-check ui-span-2">
-          <input id="cfg_reinitialize" type="checkbox" checked />
-          <span>Reinitialize wrappers and use updated config</span>
-        </label>
+        <div class="ui-check ui-span-2">
+          <label class="ui-check-label" for="cfg_reinitialize">
+            <input id="cfg_reinitialize" type="checkbox" checked />
+            <span>Reinitialize wrappers and use updated config</span>
+          </label>
+          <span class="ui-tip" tabindex="0"
+            data-tip="If enabled, Apply/Reset will re-scan the page and rebuild UndoableUI wrappers so changes affect everything.">
+            ?
+          </span>
+        </div>
+
       </div>
 
       <div class="ui-actions">
@@ -62,6 +95,7 @@ function render(hostEl) {
     </div>
   `;
 }
+
 
 
 

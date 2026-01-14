@@ -3,6 +3,7 @@ import { initColorValueMirror } from "./colorValueMirror.js";
 import { mountAddSquaresController } from "./addSquaresController.js";
 import { mountConfigPanel } from "./configPanel.js";
 import { initKeyboardHints } from "./keyboardHints.js";
+import { initMobileUndoRedoFABs } from "./mobileUndoRedoButtons.js";
 
 
 onReady(() => {
@@ -40,4 +41,12 @@ onReady(() => {
     });
 
     initKeyboardHints({ hostId: "kbdHints" });
+
+    // Open "Additional options" by default on desktop, collapsed on mobile
+    const additional = document.getElementById("additionalOptions");
+    if (additional && window.matchMedia("(min-width: 981px)").matches) {
+        additional.open = true;
+    }
+
+    initMobileUndoRedoFABs();
 });
