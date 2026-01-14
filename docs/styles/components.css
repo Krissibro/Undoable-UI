@@ -214,3 +214,61 @@ label:has(input[type="radio"]) {
     font-size: 14px;
     margin-bottom: 6px;
 }
+
+
+
+/* Mobile floating Undo/Redo buttons */
+.mobile-fabs {
+    --kbd-offset: 0px;
+
+    position: fixed;
+    right: 14px;
+
+    /* stays above safe-area + lifts above the on-screen keyboard via --kbd-offset */
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px) + var(--kbd-offset));
+
+    z-index: 9999;
+    display: none;
+
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mobile-fabs .fab {
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+
+    display: grid;
+    place-items: center;
+
+    background: var(--surface);
+    border: 1px solid rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-pop);
+
+    color: var(--text);
+    cursor: pointer;
+
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.mobile-fabs .fab svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+.mobile-fabs .fab:active {
+    transform: translateY(1px);
+}
+
+.mobile-fabs .fab:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring), var(--shadow-pop);
+}
+
+/* Show on mobile / touch */
+@media (max-width: 720px), (hover: none) and (pointer: coarse) {
+    .mobile-fabs { display: flex; }
+}

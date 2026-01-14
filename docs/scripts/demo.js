@@ -3,6 +3,7 @@ import { initColorValueMirror } from "./colorValueMirror.js";
 import { mountAddSquaresController } from "./addSquaresController.js";
 import { mountConfigPanel } from "./configPanel.js";
 import { initKeyboardHints } from "./keyboardHints.js";
+import { initMobileUndoRedoFABs } from "./mobileUndoRedoButtons.js";
 
 
 onReady(() => {
@@ -47,4 +48,5 @@ onReady(() => {
         additional.open = true;
     }
 
+    initMobileUndoRedoFABs();
 });

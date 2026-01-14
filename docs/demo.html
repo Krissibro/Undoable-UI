@@ -225,6 +225,23 @@
     </main>
 </div>
 
+<!-- Mobile floating Undo/Redo buttons -->
+<div class="mobile-fabs" id="mobileUndoRedo" aria-label="Undo and redo controls">
+    <button class="fab" id="fabUndo" type="button" aria-label="Undo" title="Undo">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7H15C17.7614 7 20 9.23857 20 12C20 14.7614 17.7614 17 15 17M4 7L7 4M4 7L7 10M8.00001 17H11"
+                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+
+    <button class="fab" id="fabRedo" type="button" aria-label="Redo" title="Redo">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 7H9C6.23857 7 4 9.23857 3.99999 12C3.99999 14.7614 6.23857 17 8.99999 17M20 7L17 4M20 7L17 10M16 17H13"
+                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+</div>
+
 <script type="module" src="scripts/demo.js"></script>
 </body>
 </html>
