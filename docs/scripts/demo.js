@@ -40,4 +40,11 @@ onReady(() => {
     });
 
     initKeyboardHints({ hostId: "kbdHints" });
+
+    // Open "Additional options" by default on desktop, collapsed on mobile
+    const additional = document.getElementById("additionalOptions");
+    if (additional && window.matchMedia("(min-width: 981px)").matches) {
+        additional.open = true;
+    }
+
 });

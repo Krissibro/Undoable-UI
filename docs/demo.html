@@ -23,18 +23,31 @@
     <header class="topbar">
         <div>
             <h1>UndoableUI Demo</h1>
-            <p class="subtitle">Test inputs + live config tweaks for Undo/Redo behavior.</p>
+            <p class="subtitle">
+                This page demonstrates UndoableUI, a library which adds undo and redo support to ordinary web pages.
+                Instead of each input managing its own history, UndoableUI keeps a shared undo history across the page, so edits feel consistent and predictable.
+                It also adds undo support to input types that don’t normally have it, like radio buttons, checkboxes, and color pickers.
+                Try changing values below and use undo/redo to move back and forth through what you did.
+                You can also adjust settings live to see how different undo behaviors affect the experience.
+            </p>
+            <p class="subtitle">
+
+            </p>
+            <p class="subtitle">
+
+            </p>
         </div>
 
         <div class="kbd-hints" id="kbdHints" aria-label="Keyboard shortcuts">
             <div class="kbd-combo" data-action="undo" title="Undo">
+<!--                <span class="kbd-desc">Try</span>-->
                 <span class="kbd kbd-mod">Ctrl</span>
                 <span class="kbd-plus">+</span>
                 <span class="kbd">Z</span>
-                <span class="kbd-desc">undo</span>
+                <span class="kbd-desc">to undo</span>
             </div>
 
-            <span class="sep">•</span>
+<!--            <span class="sep">•</span>-->
 
             <div class="kbd-combo" data-action="redo" title="Redo">
                 <span class="kbd kbd-mod">Ctrl</span>
@@ -49,7 +62,7 @@
                 <span class="kbd-plus">+</span>
                 <span class="kbd">Y</span>
 
-                <span class="kbd-desc">redo</span>
+                <span class="kbd-desc">to redo</span>
             </div>
         </div>
     </header>
@@ -69,21 +82,28 @@
                 </div>
             </section>
 
-            <!-- Add-to-grid mounts here -->
-            <section class="panel">
-                <div class="control-panel-title">Add New Test Groups</div>
-                <div class="panel-desc subtle">
-                    For testing if the MutationObserver catches and adds undoable wrappers to new elements.
-                </div>
-                <div id="add-squares-to-grid-controller"></div>
-            </section>
+            <!-- Additional options (collapsible) -->
+            <details class="panel additional-options" id="additionalOptions">
+                <summary class="control-panel-title">Additional options</summary>
 
-            <!-- Config panel mounts here -->
-            <section class="panel">
-                <div class="control-panel-title">Config</div>
-                <div class="panel-desc subtle">Live tweak UndoableUI behavior</div>
-                <div id="config-controller"></div>
-            </section>
+                <p class="panel-desc subtle">
+                    Advanced testing tools: add new groups and tweak UndoableUI settings.
+                </p>
+
+                <div class="opt-block">
+                    <div class="opt-title">Add New Test Groups</div>
+                    <div class="panel-desc subtle">
+                        For testing if the MutationObserver catches and wraps new elements.
+                    </div>
+                    <div id="add-squares-to-grid-controller"></div>
+                </div>
+
+                <div class="opt-block">
+                    <div class="opt-title">Config</div>
+                    <div class="panel-desc subtle">Live tweak UndoableUI behavior</div>
+                    <div id="config-controller"></div>
+                </div>
+            </details>
         </aside>
 
         <section class="content">
