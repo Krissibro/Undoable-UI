@@ -88,3 +88,125 @@ body[data-undoableui-busy="1"]::after {
     font-size: 12px;
     opacity: 0.92;
 }
+
+/* --- Tooltips for config panel --- */
+.ui-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.ui-label-row .ui-label {
+    margin: 0;
+    display: inline;
+    flex: 1;
+}
+
+/* Tooltip trigger */
+.ui-tip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+    height: 18px;
+
+    border: 1px solid rgba(0,0,0,0.18);
+    border-radius: 999px;
+    background: var(--surface);
+
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.75;
+
+    cursor: help;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ui-tip:hover { opacity: 1; }
+
+.ui-tip:focus {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-color: rgba(0,0,0,0.28);
+    opacity: 1;
+}
+
+/* Tooltip bubble */
+.ui-tip::after {
+    content: attr(data-tip);
+
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 10px);
+
+    width: 260px;
+    max-width: min(260px, 78vw);
+
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-pop);
+
+    padding: 10px 12px;
+
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--text);
+
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+    transition: opacity 140ms ease, transform 140ms ease;
+
+    z-index: 50;
+}
+
+/* Little arrow (diamond) */
+.ui-tip::before {
+    content: "";
+    position: absolute;
+    right: 8px;
+    bottom: calc(100% + 5px);
+
+    width: 10px;
+    height: 10px;
+
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+
+    opacity: 0;
+    transform: rotate(45deg) translateY(4px);
+    pointer-events: none;
+    transition: opacity 140ms ease, transform 140ms ease;
+
+    z-index: 49;
+}
+
+.ui-tip:hover::after,
+.ui-tip:focus::after,
+.ui-tip:active::after {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.ui-tip:hover::before,
+.ui-tip:focus::before,
+.ui-tip:active::before {
+    opacity: 1;
+    transform: rotate(45deg) translateY(0);
+}
+
+/* Checkbox rows: let text take space, tooltip stays at the end */
+.ui-check-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
