@@ -4,12 +4,22 @@ function isEditable(el) {
 
     const tag = el.tagName?.toLowerCase();
     if (tag === "textarea") return true;
+
     if (tag === "input") {
         const type = (el.getAttribute("type") || "text").toLowerCase();
-        // types where the OS keyboard is relevant
         return ["text", "search", "email", "url", "number", "tel", "password"].includes(type);
     }
     return false;
+}
+
+function isKeyboardLikelyOpen() {
+    const vv = window.visualViewport;
+    if (!vv) return false;
+
+    const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+
+    // Threshold: small bars / browser UI shouldn't count as keyboard.
+    return hidden > 80;
 }
 
 export function initMobileUndoRedoFABs() {
@@ -30,9 +40,8 @@ export function initMobileUndoRedoFABs() {
         return;
     }
 
-    // Track last focused editable element (so we can restore focus)
+    // Track the last focused editable, but ONLY use it when the keyboard is open
     let lastEditable = null;
-
     document.addEventListener(
         "focusin",
         (e) => {
@@ -44,21 +53,22 @@ export function initMobileUndoRedoFABs() {
 
     function runAndPreserveKeyboard(fn) {
         const active = document.activeElement;
-        const keep = isEditable(active) ? active : lastEditable;
+
+        // Prefer: keep the currently focused editable (caret stays where you were typing)
+        let keep = isEditable(active) ? active : null;
+
+        // Fallback: only restore last editable if keyboard is actually open
+        if (!keep && isKeyboardLikelyOpen()) keep = lastEditable;
 
         fn();
 
-        // Safety: re-focus after the action (prevents keyboard drop / reopens quickly)
-        if (keep && typeof keep.focus === "function") {
+        if (keep && typeof keep.focus === "function" && document.activeElement !== keep) {
             requestAnimationFrame(() => keep.focus({ preventScroll: true }));
         }
     }
 
-    // Important part:
-    // Use pointerdown/touchstart + preventDefault so the button doesn't steal focus.
     function bindFab(btn, actionFn) {
         const handler = (e) => {
-            // Prevent the browser from moving focus to the button (which closes the keyboard)
             e.preventDefault();
             e.stopPropagation();
             runAndPreserveKeyboard(actionFn);
@@ -67,11 +77,10 @@ export function initMobileUndoRedoFABs() {
         if ("PointerEvent" in window) {
             btn.addEventListener("pointerdown", handler);
         } else {
-            // Older iOS fallback. Must be passive:false or preventDefault won't work.
             btn.addEventListener("touchstart", handler, { passive: false });
         }
 
-        // Prevent click from firing a second time (some browsers will still emit it)
+        // avoid double-trigger
         btn.addEventListener(
             "click",
             (e) => {
@@ -85,7 +94,7 @@ export function initMobileUndoRedoFABs() {
     bindFab(btnUndo, () => api.undo());
     bindFab(btnRedo, () => api.redo());
 
-    // --- Keep the buttons just above the on-screen keyboard (mobile) ---
+    // --- your existing keyboard offset logic ---
     const vv = window.visualViewport;
 
     const updateKeyboardOffset = () => {
